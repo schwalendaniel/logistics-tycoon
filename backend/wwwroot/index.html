@@ -18,51 +18,23 @@
       <button id="close-sidebar-btn" class="close-btn" title="Einklappen">✕</button>
     </div>
 
-    <!-- Tab Navigation -->
-    <nav class="tab-nav">
-      <button data-tab="jobs" class="tab-btn active">Aufträge</button>
-      <button data-tab="fleet" class="tab-btn">Fuhrpark</button>
-      <button data-tab="drivers" class="tab-btn">Fahrer</button>
-      <button data-tab="market" class="tab-btn">Markt</button>
-    </nav>
+    <!-- Schnellzugriff auf Dashboards -->
+    <div class="hub-nav-bar">
+      <button id="open-fleet-hub-btn" class="hub-btn">🚚 Fuhrpark & Wartung</button>
+      <button id="open-drivers-hub-btn" class="hub-btn">👤 Personalverwaltung</button>
+      <button id="open-market-hub-btn" class="hub-btn hub-btn-market">🏪 Marktplatz (Kauf & Hiring)</button>
+    </div>
 
     <div class="sidebar-body">
       <div>
         <div id="balance-box" class="balance-box"></div>
-        <div id="clock-box" class="clock-box"></div>
         <div id="status-box" class="status-box"></div>
       </div>
 
-      <!-- Tab: Aufträge -->
-      <div id="tab-jobs" class="tab-pane active">
-        <div class="section-label">Verfügbare Fracht</div>
-        <div id="job-list" class="job-list"></div>
-        <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Börse auffüllen</button>
-      </div>
+      <div class="section-label">Verfügbare Fracht</div>
+      <div id="job-list" class="job-list"></div>
+      <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Aufträge neu würfeln</button>
 
-      <!-- Tab: Fuhrpark -->
-      <div id="tab-fleet" class="tab-pane">
-        <div class="section-label">Fahrzeuge im Fuhrpark</div>
-        <div id="truck-list" class="job-list"></div>
-      </div>
-
-      <!-- Tab: Fahrer -->
-      <div id="tab-drivers" class="tab-pane">
-        <div class="section-label">Angestellte Fahrer</div>
-        <div id="driver-list" class="job-list"></div>
-      </div>
-
-      <div id="tab-market" class="tab-pane">
-        <div class="section-label">Fahrzeuge kaufen</div>
-        <div id="market-trucks" class="job-list"></div>
-        <div class="section-label" style="margin-top: 10px;">Fahrer einstellen</div>
-        <div id="market-drivers" class="job-list"></div>
-        <button id="refresh-hire-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Bewerber neu laden</button>
-        <div class="section-label" style="margin-top: 10px;">Depots</div>
-        <div id="market-depots" class="job-list"></div>
-      </div>
-
-      <!-- Ticker -->
       <div class="ticker-section">
         <div class="section-label">Ereignisse</div>
         <div id="log-list" class="log-list"></div>
@@ -70,14 +42,39 @@
     </div>
   </aside>
 
-  <!-- Modal: Tour disponieren -->
+  <!-- Großes Management Dashboard -->
+  <div id="management-modal" class="fullscreen-modal-backdrop" style="display: none;">
+    <div class="management-window">
+      <div class="mgmt-header">
+        <div class="mgmt-title-group">
+          <h2 id="mgmt-title">Flotten-Management</h2>
+          <span id="mgmt-subtitle">Fahrzeugstatus, Tankfüllstände und Zustand überwachen</span>
+        </div>
+        <div class="mgmt-tab-buttons">
+          <button id="mgmt-tab-fleet-btn" class="mgmt-tab-btn active">Fuhrpark</button>
+          <button id="mgmt-tab-driver-btn" class="mgmt-tab-btn">Personal</button>
+          <button id="mgmt-tab-market-trucks-btn" class="mgmt-tab-btn">LKW-Händler</button>
+          <button id="mgmt-tab-market-drivers-btn" class="mgmt-tab-btn">Job-Agentur</button>
+        </div>
+        <button id="close-mgmt-btn" class="close-btn-lg">✕</button>
+      </div>
+
+      <div class="mgmt-content">
+        <div id="mgmt-fleet-view" class="mgmt-view-grid"></div>
+        <div id="mgmt-driver-view" class="mgmt-view-grid" style="display: none;"></div>
+        <div id="mgmt-market-trucks-view" class="mgmt-view-grid" style="display: none;"></div>
+        <div id="mgmt-market-drivers-view" class="mgmt-view-grid" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dispatch Modal -->
   <div id="dispatch-modal" class="modal-backdrop" style="display: none;">
     <div class="modal-box">
       <div class="modal-header">
-        <h4 id="modal-job-title" style="margin: 0; color: #00e5ff;">Auftrag disponieren</h4>
+        <h4 id="modal-job-title" style="margin: 0; color: #00e5ff;">Tour disponieren</h4>
         <button id="close-modal-btn" class="close-btn">✕</button>
       </div>
-      
       <div id="modal-job-details" style="font-size: 12px; margin: 10px 0; color: #cbd5e1; line-height: 1.4;"></div>
 
       <label class="section-label">Fahrzeug wählen:</label>

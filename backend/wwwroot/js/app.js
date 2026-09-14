@@ -9,8 +9,8 @@ setElementText('panel-title', t('panelTitle'));
 setElementText('status-box', t('readyToDispatch'));
 setElementText('refresh-jobs-btn', t('refreshJobs'));
 
+// Map Initialisierung
 const germanyBounds = L.latLngBounds(L.latLng(46.5, 4.5), L.latLng(55.8, 16.0));
-
 const map = L.map('map', {
   center: [51.1657, 10.4515],
   zoom: 6,
@@ -22,63 +22,101 @@ const map = L.map('map', {
 
 L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
   maxZoom: 18,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> Deutschland'
+  attribution: '&copy; OpenStreetMap Deutschland'
 }).addTo(map);
 
+// Sidebar Toggle
 const sidebar = document.getElementById('sidebar');
 const openBtn = document.getElementById('open-sidebar-btn');
 const closeBtn = document.getElementById('close-sidebar-btn');
 
-closeBtn.onclick = () => {
-  sidebar.classList.add('collapsed');
-  openBtn.style.display = 'flex';
-};
-openBtn.onclick = () => {
-  sidebar.classList.remove('collapsed');
-  openBtn.style.display = 'none';
-};
+closeBtn.onclick = () => { sidebar.classList.add('collapsed'); openBtn.style.display = 'flex'; };
+openBtn.onclick = () => { sidebar.classList.remove('collapsed'); openBtn.style.display = 'none'; };
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-    if (btn.dataset.tab === 'market') loadMarket();
-  };
-});
+// Dashboard Modal & Tabs
+const mgmtModal = document.getElementById('management-modal');
+const closeMgmtBtn = document.getElementById('close-mgmt-btn');
+const tabFleetBtn = document.getElementById('mgmt-tab-fleet-btn');
+const tabDriverBtn = document.getElementById('mgmt-tab-driver-btn');
+const tabMarketTrucksBtn = document.getElementById('mgmt-tab-market-trucks-btn');
+const tabMarketDriversBtn = document.getElementById('mgmt-tab-market-drivers-btn');
+
+const viewFleet = document.getElementById('mgmt-fleet-view');
+const viewDriver = document.getElementById('mgmt-driver-view');
+const viewMarketTrucks = document.getElementById('mgmt-market-trucks-view');
+const viewMarketDrivers = document.getElementById('mgmt-market-drivers-view');
+
+document.getElementById('open-fleet-hub-btn').onclick = () => openManagement('fleet');
+document.getElementById('open-drivers-hub-btn').onclick = () => openManagement('drivers');
+document.getElementById('open-market-hub-btn').onclick = () => openManagement('market-trucks');
+
+function openManagement(tab) {
+  mgmtModal.style.display = 'flex';
+  switchMgmtTab(tab);
+}
+
+closeMgmtBtn.onclick = () => { mgmtModal.style.display = 'none'; };
+
+function switchMgmtTab(tab) {
+  const allBtns = [tabFleetBtn, tabDriverBtn, tabMarketTrucksBtn, tabMarketDriversBtn];
+  const allViews = [viewFleet, viewDriver, viewMarketTrucks, viewMarketDrivers];
+
+  allBtns.forEach(b => b.classList.remove('active'));
+  allViews.forEach(v => v.style.display = 'none');
+
+  if (tab === 'fleet') {
+    tabFleetBtn.classList.add('active');
+    viewFleet.style.display = 'grid';
+    document.getElementById('mgmt-title').innerText = "Flotten-Management";
+    document.getElementById('mgmt-subtitle').innerText = "Fahrzeugstatus, Tankfüllstände und Werkstattoptionen";
+  } else if (tab === 'drivers') {
+    tabDriverBtn.classList.add('active');
+    viewDriver.style.display = 'grid';
+    document.getElementById('mgmt-title').innerText = "Personalabteilung";
+    document.getElementById('mgmt-subtitle').innerText = "Angestellte Kraftfahrer, Kondition und Moral";
+  } else if (tab === 'market-trucks') {
+    tabMarketTrucksBtn.classList.add('active');
+    viewMarketTrucks.style.display = 'grid';
+    document.getElementById('mgmt-title').innerText = "LKW-Katalog & Fahrzeughandel";
+    document.getElementById('mgmt-subtitle').innerText = "Erweitere deinen Fuhrpark um neue Lieferwagen und Sattelzüge";
+    loadMarket();
+  } else if (tab === 'market-drivers') {
+    tabMarketDriversBtn.classList.add('active');
+    viewMarketDrivers.style.display = 'grid';
+    document.getElementById('mgmt-title').innerText = "Arbeitsagentur & Bewerber-Pool";
+    document.getElementById('mgmt-subtitle').innerText = "Qualifizierte Fahrer unter Vertrag nehmen";
+    loadMarket();
+  }
+}
+
+tabFleetBtn.onclick = () => switchMgmtTab('fleet');
+tabDriverBtn.onclick = () => switchMgmtTab('drivers');
+tabMarketTrucksBtn.onclick = () => switchMgmtTab('market-trucks');
+tabMarketDriversBtn.onclick = () => switchMgmtTab('market-drivers');
 
 let cachedState = null;
 let selectedJobForDispatch = null;
 const mapTours = new Map();
-const depotMarkers = new Map();
-let lastFleetKey = '';
-let lastDriverKey = '';
-let lastMarketKey = '';
 
-async function postJson(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-  return res;
+function getTruckIllustration(type) {
+  if (type === "SemiTruck") return 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=400&q=80';
+  if (type === "Rigid") return 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=400&q=80';
+  return 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=400&q=80';
 }
 
+// 1. Frachtaufträge laden
 export async function loadJobs() {
   const container = document.getElementById('job-list');
-  container.innerHTML = 'Lade Frachtbörse...';
-
+  container.innerHTML = "Lade Frachtbörse...";
+  
   const res = await fetch('/api/jobs');
   const jobs = await res.json();
-
-  container.innerHTML = '';
+  
+  container.innerHTML = "";
   jobs.forEach(job => {
     const card = document.createElement('div');
     card.className = `job-card ${job.isIllegal ? 'illegal' : 'legal'}`;
+    
     card.innerHTML = `
       <div class="job-title" style="color: ${job.isIllegal ? '#ff5252' : '#e0e0e0'}">${job.title}</div>
       <div>${job.originCity} ➔ ${job.destinationCity} (${job.cargoWeightTons} t)</div>
@@ -92,6 +130,7 @@ export async function loadJobs() {
   });
 }
 
+// 2. Dispatch Modal
 function openDispatchModal(job) {
   if (!cachedState) return;
   selectedJobForDispatch = job;
@@ -104,26 +143,21 @@ function openDispatchModal(job) {
 
   const truckSelect = document.getElementById('select-truck');
   truckSelect.innerHTML = cachedState.trucks.map(t => {
-    const isIdle = t.status === 'Idle';
+    const isIdle = t.status === "Idle";
     const hasPayload = t.maxPayloadTons >= job.cargoWeightTons;
     const disabled = !isIdle || !hasPayload;
-    const deadhead = t.currentCity && t.currentCity !== job.originCity ? ` | steht in ${t.currentCity}` : '';
-    const label = `${t.licensePlate} (${t.modelName}) | Max: ${t.maxPayloadTons}t | Tank: ${Math.round(t.currentFuelLiters)}L${deadhead} ${!isIdle ? `[${t.status}]` : !hasPayload ? '[Zu schwer]' : ''}`;
+    const label = `${t.licensePlate} (${t.modelName}) | Max: ${t.maxPayloadTons}t | Tank: ${Math.round(t.currentFuelLiters)}L ${!isIdle ? `[${t.status}]` : !hasPayload ? '[Zu schwer]' : ''}`;
     return `<option value="${t.id}" ${disabled ? 'disabled' : ''}>${label}</option>`;
   }).join('');
 
   const driverSelect = document.getElementById('select-driver');
   driverSelect.innerHTML = cachedState.drivers.map(d => {
-    const isAvail = d.status === 'Available';
-    const label = `${d.name} | Skill: ${d.drivingSkill} | Loyalität: ${d.loyalty} | Moral: ${d.morale}% ${!isAvail ? `[${d.status}]` : ''}`;
+    const isAvail = d.status === "Available";
+    const label = `${d.name} | Skill: ${d.drivingSkill} | Moral: ${d.morale}% ${!isAvail ? `[${d.status}]` : ''}`;
     return `<option value="${d.id}" ${!isAvail ? 'disabled' : ''}>${label}</option>`;
   }).join('');
 
-  const warn = [];
-  if (job.isIllegal) {
-    warn.push('Schwarzmarkt: Kontrolle möglich. Niedrige Loyalität ist gefährlich.');
-  }
-  document.getElementById('modal-warning').innerText = warn.join(' ');
+  document.getElementById('modal-warning').innerText = "";
   document.getElementById('dispatch-modal').style.display = 'flex';
 }
 
@@ -140,144 +174,147 @@ document.getElementById('confirm-dispatch-btn').onclick = async () => {
   const driverId = document.getElementById('select-driver').value;
   const warning = document.getElementById('modal-warning');
 
-  if (!truckId || !driverId || !selectedJobForDispatch) {
-    warning.innerText = 'Bitte wähle ein geeignetes Fahrzeug und einen Fahrer aus.';
+  if (!truckId || !driverId) {
+    warning.innerText = "Bitte wähle ein geeignetes Fahrzeug und einen Fahrer aus.";
     return;
   }
 
-  const driver = cachedState.drivers.find(d => d.id === driverId);
-  if (selectedJobForDispatch.isIllegal && driver && driver.loyalty < 50) {
-    warning.innerText = `${driver.name} hat nur ${driver.loyalty} Loyalität — hohe Gefahr bei einer Razzia.`;
+  // Endpunkt erwartet JobId, TruckId, DriverId laut GameEndpoints.cs
+  const res = await fetch('/api/tours/dispatch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jobId: selectedJobForDispatch.id,
+      truckId: truckId,
+      driverId: driverId
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    warning.innerText = err;
+    return;
   }
 
-  try {
-    await postJson('/api/tours/dispatch', {
-      jobId: selectedJobForDispatch.id,
-      truckId,
-      driverId
-    });
-    closeDispatchModal();
-    loadJobs();
-  } catch (err) {
-    warning.innerText = err.message;
-  }
+  closeDispatchModal();
+  loadJobs();
 };
 
-document.getElementById('truck-list').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const truckId = btn.dataset.id;
-  try {
-    if (btn.dataset.action === 'refuel') await postJson('/api/fleet/refuel', { truckId });
-    if (btn.dataset.action === 'maintain') await postJson('/api/fleet/maintain', { truckId, level: btn.dataset.level });
-    if (btn.dataset.action === 'bail') await postJson('/api/fleet/bail', { truckId });
-    lastFleetKey = '';
-    syncGameState();
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-document.getElementById('driver-list').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const driverId = btn.dataset.id;
-  try {
-    if (btn.dataset.action === 'bonus') {
-      const amount = Number(prompt('Bonus in €', '250'));
-      if (!amount) return;
-      await postJson('/api/personnel/bonus', { driverId, amount });
-    }
-    if (btn.dataset.action === 'salary') {
-      const monthlySalary = Number(prompt('Neues Monatsgehalt', btn.dataset.salary));
-      if (!monthlySalary) return;
-      await postJson('/api/personnel/salary', { driverId, monthlySalary });
-    }
-    if (btn.dataset.action === 'bail-driver') {
-      await postJson('/api/personnel/bail', { driverId });
-    }
-    lastDriverKey = '';
-    syncGameState();
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
+// 3. Marktplatz Daten laden (/api/market)
 async function loadMarket() {
-  const res = await fetch('/api/market');
-  if (!res.ok) return;
-  const data = await res.json();
-  const key = JSON.stringify(data);
-  if (key === lastMarketKey) return;
-  lastMarketKey = key;
+  try {
+    const res = await fetch('/api/market');
+    if (!res.ok) return;
+    const market = await res.json();
 
-  document.getElementById('market-trucks').innerHTML = data.trucks.map(c => `
-    <div class="job-card static">
-      <div style="font-weight:bold;">${c.modelName}</div>
-      <div>${c.type} | ${c.maxPayloadTons} t | ${c.price.toLocaleString('de-DE')} €</div>
-      <div class="card-actions">
-        <button class="btn-tiny" data-buy-truck="${c.catalogId}">Kaufen</button>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('market-drivers').innerHTML = data.drivers.map(d => `
-    <div class="job-card static">
-      <div style="font-weight:bold;">${d.name}</div>
-      <div>Skill ${d.drivingSkill} · Zuverl. ${d.reliability} · Stress ${d.stressResistance} · Loyal ${d.loyalty}</div>
-      <div>${d.askingSalary.toLocaleString('de-DE')} €/Monat · Handgeld ${d.signingFee.toLocaleString('de-DE')} €</div>
-      <div class="card-actions">
-        <button class="btn-tiny" data-hire="${d.id}">Einstellen</button>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('market-depots').innerHTML = data.depots.length
-    ? data.depots.map(d => `
-      <div class="job-card static">
-        <div style="font-weight:bold;">Depot ${d.cityName}</div>
-        <div>${d.price.toLocaleString('de-DE')} €</div>
-        <div class="card-actions">
-          <button class="btn-tiny" data-buy-depot="${d.cityName}">Kaufen</button>
+    // LKW-Katalog rendern
+    viewMarketTrucks.innerHTML = market.trucks.map(t => {
+      const truckImg = getTruckIllustration(t.type);
+      return `
+        <div class="mgmt-card">
+          <div class="mgmt-card-hero">
+            <img src="${truckImg}" alt="${t.modelName}" />
+            <span class="mgmt-badge" style="background:#0284c7; color:#fff;">Neufahrzeug</span>
+          </div>
+          <div class="mgmt-card-body">
+            <div>
+              <div class="mgmt-card-title">${t.modelName}</div>
+              <div class="mgmt-card-sub">${t.type} · Max. Zuladung: ${t.maxPayloadTons}t</div>
+            </div>
+            <div style="font-size: 18px; font-weight: bold; color: #ffd166; margin: 4px 0;">
+              ${t.price.toLocaleString('de-DE')} €
+            </div>
+            <div class="mgmt-actions">
+              <button class="btn-primary" style="margin: 0; width: 100%;" onclick="buyTruck('${t.catalogId}')">
+                Kaufen & Einflotten
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    `).join('')
-    : '<div class="job-card static">Alle angebotenen Depots gehören dir.</div>';
+      `;
+    }).join('');
+
+    // Fahrer-Bewerberpool rendern
+    viewMarketDrivers.innerHTML = market.drivers.map(d => {
+      const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(d.name)}`;
+      return `
+        <div class="mgmt-card">
+          <div class="mgmt-card-hero">
+            <img src="${avatarUrl}" class="avatar-circle" alt="${d.name}" />
+            <span class="mgmt-badge badge-idle">Bewerber</span>
+          </div>
+          <div class="mgmt-card-body">
+            <div>
+              <div class="mgmt-card-title">${d.name}</div>
+              <div class="mgmt-card-sub">Gehaltsanspruch: ${d.expectedSalary.toLocaleString('de-DE')} €/Monat</div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Fahrpraxis</span><span>${d.drivingSkill}/100</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-skill" style="width: ${d.drivingSkill}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Zuverlässigkeit</span><span>${d.reliability}/100</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-engine" style="width: ${d.reliability}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Loyalität</span><span>${d.loyalty}/100</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-fuel" style="width: ${d.loyalty}%"></div></div>
+            </div>
+            <div class="mgmt-actions">
+              <button class="btn-primary" style="margin: 0; width: 100%;" onclick="hireDriver('${d.id}')">
+                Einstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error("Fehler beim Laden des Marktes:", err);
+  }
 }
 
-document.getElementById('tab-market').addEventListener('click', async (e) => {
-  try {
-    if (e.target.dataset.buyTruck) {
-      await postJson('/api/fleet/buy', { catalogId: e.target.dataset.buyTruck });
-      lastMarketKey = '';
-      lastFleetKey = '';
-      await loadMarket();
-      syncGameState();
-    }
-    if (e.target.dataset.hire) {
-      await postJson('/api/personnel/hire', { prospectId: e.target.dataset.hire });
-      lastMarketKey = '';
-      lastDriverKey = '';
-      await loadMarket();
-      syncGameState();
-    }
-    if (e.target.dataset.buyDepot) {
-      await postJson('/api/depots/buy', { cityName: e.target.dataset.buyDepot });
-      lastMarketKey = '';
-      await loadMarket();
-      syncGameState();
-    }
-  } catch (err) {
-    alert(err.message);
-  }
-});
-
-document.getElementById('refresh-hire-btn').onclick = async () => {
-  await postJson('/api/market/hire-refresh', {});
-  lastMarketKey = '';
-  loadMarket();
+// Aktionen: Kauf, Einstellung, Tanken, Wartung
+window.buyTruck = async (catalogId) => {
+  const res = await fetch('/api/fleet/buy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ catalogId })
+  });
+  if (!res.ok) { alert(await res.text()); return; }
+  switchMgmtTab('fleet');
 };
 
+window.hireDriver = async (prospectId) => {
+  const res = await fetch('/api/personnel/hire', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prospectId })
+  });
+  if (!res.ok) { alert(await res.text()); return; }
+  switchMgmtTab('drivers');
+};
+
+window.refuelTruck = async (truckId) => {
+  const res = await fetch('/api/fleet/refuel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ truckId })
+  });
+  if (!res.ok) alert(await res.text());
+};
+
+window.maintainTruck = async (truckId, level) => {
+  const res = await fetch('/api/fleet/maintain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ truckId, level })
+  });
+  if (!res.ok) alert(await res.text());
+};
+
+// 4. Live GameState Synchronisation
 async function syncGameState() {
   try {
     const res = await fetch('/api/state');
@@ -286,76 +323,85 @@ async function syncGameState() {
     const data = await res.json();
     cachedState = data;
 
-    document.getElementById('balance-box').innerText =
-      `Kontostand: ${data.balance.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €`;
-    document.getElementById('clock-box').innerText = `Tag ${data.day}, ${String(data.hour).padStart(2, '0')}:00 · Heimat ${data.homeCity}`;
-    document.getElementById('status-box').innerText = `Aktive Touren: ${data.activeTours.length}`;
+    document.getElementById('balance-box').innerText = `Kontostand: ${data.balance.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €`;
+    document.getElementById('status-box').innerText = `Aktive Touren: ${data.activeTours.length} | Tag ${data.day}, ${data.hour}:00 Uhr`;
     document.getElementById('log-list').innerHTML = data.logs.map(log => `<div class="log-entry">${log}</div>`).join('');
 
-    const fleetKey = JSON.stringify(data.trucks);
-    if (fleetKey !== lastFleetKey) {
-      lastFleetKey = fleetKey;
-      document.getElementById('truck-list').innerHTML = data.trucks.map(t => {
-        const idle = t.status === 'Idle';
-        const impounded = t.status === 'Impounded';
-        return `
-          <div class="job-card static">
-            <div style="font-weight: bold;">${t.licensePlate} (${t.modelName})</div>
-            <div>${t.type} · ${t.maxPayloadTons} t · steht in ${t.currentCity}</div>
-            <div>Tank: ${Math.round(t.currentFuelLiters)} / ${t.fuelCapacityLiters} L</div>
-            <div>Reifen ${t.tireCondition.toFixed(0)}% · Motor ${t.engineCondition.toFixed(0)}% · Kabine ${t.cabinCleanliness.toFixed(0)}%</div>
-            <div>Letzte Wartung: ${t.lastMaintenance}</div>
-            <div style="color: ${idle ? '#69f0ae' : '#ffb74d'}; font-weight: bold;">Status: ${t.status}</div>
-            <div class="card-actions">
-              ${idle ? `<button class="btn-tiny" data-action="refuel" data-id="${t.id}">Tanken</button>
-                <button class="btn-tiny" data-action="maintain" data-level="PatchJob" data-id="${t.id}">TÜV-Notdurft</button>
-                <button class="btn-tiny" data-action="maintain" data-level="Standard" data-id="${t.id}">Inspektion</button>
-                <button class="btn-tiny" data-action="maintain" data-level="Premium" data-id="${t.id}">Premium</button>` : ''}
-              ${impounded ? `<button class="btn-tiny" data-action="bail" data-id="${t.id}">Kaution</button>` : ''}
+    // Eigene Flotte rendern
+    viewFleet.innerHTML = data.trucks.map(t => {
+      const isIdle = t.status === "Idle";
+      const fuelPct = Math.min(100, (t.currentFuelLiters / t.fuelCapacityLiters) * 100);
+      const badgeClass = isIdle ? 'badge-idle' : t.status === "Impounded" ? 'badge-danger' : 'badge-active';
+      const truckImg = getTruckIllustration(t.type);
+
+      return `
+        <div class="mgmt-card">
+          <div class="mgmt-card-hero">
+            <img src="${truckImg}" alt="${t.modelName}" />
+            <span class="mgmt-badge ${badgeClass}">${t.status}</span>
+          </div>
+          <div class="mgmt-card-body">
+            <div>
+              <div class="mgmt-card-title">${t.licensePlate} · ${t.modelName}</div>
+              <div class="mgmt-card-sub">${t.type} · Max. Zuladung: ${t.maxPayloadTons}t · Standort: ${t.currentCity}</div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Diesel</span><span>${Math.round(t.currentFuelLiters)} / ${t.fuelCapacityLiters} L (${fuelPct.toFixed(0)}%)</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-fuel" style="width: ${fuelPct}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Motor</span><span>${t.engineCondition.toFixed(1)}%</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-engine" style="width: ${t.engineCondition}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Reifen</span><span>${t.tireCondition.toFixed(1)}%</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-tire" style="width: ${t.tireCondition}%"></div></div>
+            </div>
+            <div class="mgmt-actions">
+              <button class="mgmt-action-btn" onclick="refuelTruck('${t.id}')" ${!isIdle ? 'disabled' : ''}>⛽ Tanken</button>
+              <button class="mgmt-action-btn" onclick="maintainTruck('${t.id}', 1)" ${!isIdle ? 'disabled' : ''}>🔧 Wartung</button>
             </div>
           </div>
-        `;
-      }).join('');
-    }
+        </div>
+      `;
+    }).join('');
 
-    const driverKey = JSON.stringify(data.drivers);
-    if (driverKey !== lastDriverKey) {
-      lastDriverKey = driverKey;
-      document.getElementById('driver-list').innerHTML = data.drivers.map(d => {
-        const ok = d.status === 'Available';
-        return `
-          <div class="job-card static">
-            <div style="font-weight: bold;">${d.name}</div>
-            <div>Können ${d.drivingSkill} · Zuverl. ${d.reliability} · Stress ${d.stressResistance} · Loyal ${d.loyalty}</div>
-            <div>Gesundheit ${d.health}% · Moral ${d.morale}%</div>
-            <div>Gehalt ${d.currentSalary.toLocaleString('de-DE')} € (Markt ${d.expectedSalary.toLocaleString('de-DE')} €)</div>
-            ${d.sickLeaveDaysRemaining > 0 ? `<div>Kranktage: ${d.sickLeaveDaysRemaining}</div>` : ''}
-            <div style="color: ${ok ? '#69f0ae' : '#ffb74d'}; font-weight: bold;">Status: ${d.status}</div>
-            <div class="card-actions">
-              <button class="btn-tiny" data-action="bonus" data-id="${d.id}">Bonus</button>
-              <button class="btn-tiny" data-action="salary" data-id="${d.id}" data-salary="${d.currentSalary}">Gehalt</button>
-              ${d.status === 'Arrested' ? `<button class="btn-tiny" data-action="bail-driver" data-id="${d.id}">Kaution</button>` : ''}
+    // Eigenes Personal rendern
+    viewDriver.innerHTML = data.drivers.map(d => {
+      const isAvail = d.status === "Available";
+      const isSick = d.status === "SickLeave";
+      const badgeClass = isAvail ? 'badge-idle' : isSick ? 'badge-danger' : 'badge-active';
+      const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(d.name)}`;
+
+      return `
+        <div class="mgmt-card">
+          <div class="mgmt-card-hero">
+            <img src="${avatarUrl}" class="avatar-circle" alt="${d.name}" />
+            <span class="mgmt-badge ${badgeClass}">${d.status}</span>
+          </div>
+          <div class="mgmt-card-body">
+            <div>
+              <div class="mgmt-card-title">${d.name}</div>
+              <div class="mgmt-card-sub">Lohn: ${d.currentSalary.toLocaleString('de-DE')} €/Monat</div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Fahrpraxis</span><span>${d.drivingSkill}/100</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-skill" style="width: ${d.drivingSkill}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Moral</span><span>${d.morale}%</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-fuel" style="width: ${d.morale}%"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-header"><span>Gesundheit</span><span>${d.health}%</span></div>
+              <div class="progress-bar-bg"><div class="progress-bar-fill bg-engine" style="width: ${d.health}%"></div></div>
             </div>
           </div>
-        `;
-      }).join('');
-    }
+        </div>
+      `;
+    }).join('');
 
-    const seenDepots = new Set(data.depots.map(d => d.cityName));
-    for (const [name, marker] of depotMarkers.entries()) {
-      if (!seenDepots.has(name)) {
-        map.removeLayer(marker);
-        depotMarkers.delete(name);
-      }
-    }
-    data.depots.forEach(d => {
-      if (depotMarkers.has(d.cityName) || !d.location) return;
-      const marker = L.marker([d.location.latitude, d.location.longitude])
-        .addTo(map)
-        .bindPopup(`${d.isHome ? 'Heimatdepot' : 'Depot'} ${d.cityName}`);
-      depotMarkers.set(d.cityName, marker);
-    });
-
+    // Touren auf Karte
     const activeServerIds = new Set(data.activeTours.map(t => t.id));
     for (const [id, tourObj] of mapTours.entries()) {
       if (!activeServerIds.has(id)) {
@@ -366,7 +412,6 @@ async function syncGameState() {
     }
 
     data.activeTours.forEach(tour => {
-      if (!tour.currentPoint) return;
       let tourObj = mapTours.get(tour.id);
       if (!tourObj) {
         const latLngs = tour.fullGeometry.map(p => [p.latitude, p.longitude]);
@@ -383,21 +428,22 @@ async function syncGameState() {
           weight: 2
         }).addTo(map).bindPopup(`${tour.truckPlate} (${tour.driverName})<br>${tour.title}`);
 
-        mapTours.set(tour.id, { polyline, marker });
-      } else {
+        tourObj = { polyline, marker };
+        mapTours.set(tour.id, tourObj);
+      } else if (tour.currentPoint) {
         tourObj.marker.setLatLng([tour.currentPoint.latitude, tour.currentPoint.longitude]);
       }
     });
+
   } catch (err) {
-    console.error('Sync error:', err);
+    console.error("Sync error:", err);
   }
 }
 
 document.getElementById('refresh-jobs-btn').onclick = async () => {
-  await postJson('/api/jobs/refresh', {});
+  await fetch('/api/jobs/refresh', { method: 'POST' });
   loadJobs();
 };
 
 loadJobs();
-syncGameState();
 setInterval(syncGameState, 1000);

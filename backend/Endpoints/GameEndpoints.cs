@@ -40,6 +40,8 @@ public static class GameEndpoints
             return Results.Ok(new { tour.Id, Progress = tour.ProgressPercentage });
         });
 
+        
+
         app.MapPost("/api/fleet/refuel", (RefuelRequest request, FleetService fleet) =>
             ToResult(fleet.Refuel(request.TruckId)));
 

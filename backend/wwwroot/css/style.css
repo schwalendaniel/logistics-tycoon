@@ -339,3 +339,448 @@ body, html {
   border-color: #00bcd4;
   outline: none;
 }
+
+/* Hub Buttons in Sidebar */
+.hub-nav-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e293b;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.hub-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.hub-btn:hover {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+/* Großes modales Management Dashboard */
+.fullscreen-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 19, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.management-window {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: min(1200px, 94vw);
+  height: min(850px, 88vh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.mgmt-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #111c34;
+}
+
+.mgmt-title-group h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #f8fafc;
+}
+
+.mgmt-title-group span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.mgmt-tab-buttons {
+  display: flex;
+  gap: 8px;
+  background: #090e1a;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+}
+
+.mgmt-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mgmt-tab-btn.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.close-btn-lg {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.close-btn-lg:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+.mgmt-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* Grid Layout für Fahrzeuge & Mitarbeiter */
+.mgmt-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.mgmt-card {
+  background: #172136;
+  border: 1px solid #28354f;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.mgmt-card:hover {
+  transform: translateY(-2px);
+  border-color: #3b82f6;
+}
+
+.mgmt-card-hero {
+  height: 110px;
+  position: relative;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #28354f;
+}
+
+.mgmt-card-hero img {
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.avatar-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid #3b82f6;
+  background: #0f172a;
+}
+
+.mgmt-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badge-idle { background: #064e3b; color: #34d399; }
+.badge-active { background: #78350f; color: #fbbf24; }
+.badge-danger { background: #7f1d1d; color: #f87171; }
+
+.mgmt-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.mgmt-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.mgmt-card-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Balken-Indikatoren */
+.stat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-bar-bg {
+  height: 6px;
+  background: #0b1120;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.bg-fuel { background: #f59e0b; }
+.bg-engine { background: #10b981; }
+.bg-tire { background: #06b6d4; }
+.bg-skill { background: #8b5cf6; }
+
+.mgmt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.mgmt-action-btn {
+  flex: 1;
+  padding: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mgmt-action-btn:hover {
+  background: #334155;
+  border-color: #64748b;
+}
+
+.hub-nav-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e293b;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.hub-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.hub-btn:hover { background: #2563eb; border-color: #3b82f6; color: #fff; }
+.hub-btn-market { border-color: #f59e0b; color: #fbbf24; }
+.hub-btn-market:hover { background: #b45309; border-color: #f59e0b; }
+
+.fullscreen-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 19, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.management-window {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: min(1200px, 94vw);
+  height: min(850px, 88vh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.mgmt-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #111c34;
+}
+
+.mgmt-title-group h2 { margin: 0; font-size: 18px; color: #f8fafc; }
+.mgmt-title-group span { font-size: 12px; color: #64748b; }
+
+.mgmt-tab-buttons {
+  display: flex;
+  gap: 6px;
+  background: #090e1a;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #1e293b;
+}
+
+.mgmt-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mgmt-tab-btn.active { background: #2563eb; color: #fff; }
+
+.close-btn-lg {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.close-btn-lg:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+.mgmt-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+.mgmt-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.mgmt-card {
+  background: #172136;
+  border: 1px solid #28354f;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mgmt-card:hover { border-color: #3b82f6; }
+
+.mgmt-card-hero {
+  height: 110px;
+  position: relative;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #28354f;
+}
+
+.mgmt-card-hero img { max-height: 80px; object-fit: contain; }
+
+.avatar-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 3px solid #3b82f6;
+  background: #0f172a;
+}
+
+.mgmt-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.badge-idle { background: #064e3b; color: #34d399; }
+.badge-active { background: #78350f; color: #fbbf24; }
+.badge-danger { background: #7f1d1d; color: #f87171; }
+
+.mgmt-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.mgmt-card-title { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+.mgmt-card-sub { font-size: 12px; color: #94a3b8; }
+
+.stat-row { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #cbd5e1; }
+.stat-header { display: flex; justify-content: space-between; }
+.progress-bar-bg { height: 6px; background: #0b1120; border-radius: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 3px; }
+
+.bg-fuel { background: #f59e0b; }
+.bg-engine { background: #10b981; }
+.bg-tire { background: #06b6d4; }
+.bg-skill { background: #8b5cf6; }
+
+.mgmt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.mgmt-action-btn {
+  flex: 1;
+  padding: 8px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mgmt-action-btn:hover { background: #334155; }

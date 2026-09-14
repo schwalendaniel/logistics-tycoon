@@ -1,0 +1,125 @@
+namespace LogisticsGame.Api.Models;
+
+public record Coordinates(double Latitude, double Longitude);
+
+public class City
+{
+    public string Name { get; set; } = string.Empty;
+    public Coordinates Location { get; set; } = new(0, 0);
+}namespace LogisticsGame.Api.Models;
+
+public record DispatchTourRequest(Job Job, Guid TruckId, Guid DriverId);namespace LogisticsGame.Api.Models;
+
+public class Driver
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = string.Empty;
+    public decimal MonthlySalary { get; set; }
+
+    // RPG-Skills (Wertebereich 0 bis 100)
+    public int DrivingSkill { get; set; } = 50;      // Senkt Spritverbrauch & Unfallrisiko
+    public int Reliability { get; set; } = 50;       // Pünktlichkeit vs. Trödeln
+    public int StressResistance { get; set; } = 50;  // Beeinflusst Erschöpfung bei langen Touren
+    public int Loyalty { get; set; } = 50;           // Wie dicht hält er bei Zoll-/Polizeikontrollen?
+    // Gesundheit, Zufriedenheit & Vergütung
+    public int Health { get; set; } = 100;              // 0 = Intensivstation, 100 = Topfit
+    public int Morale { get; set; } = 80;               // 0 = Streikbereit / Krankfeiern, 100 = Hochmotiviert
+    public decimal CurrentSalary { get; set; }          // Tatsächlich gezahlter Lohn
+    public decimal ExpectedSalary { get; set; }         // Marktüblicher Anspruch laut Skillset
+    public int SickLeaveDaysRemaining { get; set; } = 0; // Sperrzeit bei Krankheit
+
+    public DriverStatus Status { get; set; } = DriverStatus.Available;
+}
+
+public enum DriverStatus
+{
+    Available,
+    OnRoute,
+    Resting,
+    SickLeave,
+    Arrested
+}namespace LogisticsGame.Api.Models;
+
+public class Job
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = string.Empty;
+    public string OriginCity { get; set; } = string.Empty;
+    public string DestinationCity { get; set; } = string.Empty;
+    public double CargoWeightTons { get; set; }
+    public decimal Revenue { get; set; }
+
+    // Schwarzmarkt & Risiko
+    public bool IsIllegal { get; set; } = false;
+    public double InspectionRiskPercentage { get; set; } = 0.0; // Wahrscheinlichkeit einer Razzia
+    public decimal PenaltyFine { get; set; } = 0m;              // Strafe bei Entdeckung
+
+    // Laufzeit
+    public DateTime ExpirationDate { get; set; }
+    public JobStatus Status { get; set; } = JobStatus.Open;
+}
+
+public enum JobStatus
+{
+    Open,
+    Assigned,
+    Completed,
+    Failed
+}namespace LogisticsGame.Api.Models;
+
+public record RoutePoint(double Latitude, double Longitude);
+
+public class RouteInfo
+{
+    public double DistanceKm { get; set; }
+    public double EstimatedDurationMinutes { get; set; }
+    public List<RoutePoint> Geometry { get; set; } = new();
+}namespace LogisticsGame.Api.Models;
+
+public class Truck
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string ModelName { get; set; } = string.Empty; // z. B. "Hauler 40T", kein Markenname
+    public string LicensePlate { get; set; } = string.Empty; 
+    public TruckType Type { get; set; }
+    public double MaxPayloadTons { get; set; }
+    public double FuelCapacityLiters { get; set; }
+    public double CurrentFuelLiters { get; set; }
+
+    // Zustand & Verschleiß (100 = Fabrikneu, 0 = Schrott)
+    public double EngineCondition { get; set; } = 100.0;
+    public double TireCondition { get; set; } = 100.0;
+    public double TotalKilometers { get; set; } = 0.0;
+
+    // Zugewiesener Fahrer
+    public Guid? AssignedDriverId { get; set; }
+
+    public TruckStatus Status { get; set; } = TruckStatus.Idle;
+
+    // Zustand & Kabinenhygiene
+    public double CabinCleanliness { get; set; } = 100.0; // Filter/Klima-Zustand (beeinflusst Fahrer-Gesundheit)
+    public MaintenanceLevel LastMaintenanceLevel { get; set; } = MaintenanceLevel.Standard;
+}
+
+public enum TruckType
+{
+    Van,       // 3.5t Sprinter (schnell, mautfrei, kleine Fracht)
+    Rigid,     // 12t Verteiler-Lkw
+    SemiTruck  // 40t Sattelzug (hohe Fracht, teure Maut)
+}
+
+public enum TruckStatus
+{
+    Idle,
+    Loading,
+    EnRoute,
+    Maintenance,
+    Impounded // Beschlagnahmt nach Schwarzmarkt-Razzia
+}
+
+public enum MaintenanceLevel
+{
+    PatchJob,    // Nur das Nötigste (billig, miese Kabinenluft)
+    Standard,    // Normale Inspektion
+    Premium      // Alles neu inkl. Pollenfilter, AC-Service, Ergonomie-Check
+}

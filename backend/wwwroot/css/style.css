@@ -1,0 +1,289 @@
+:root {
+  /* Skaliert flüssig: 24% der Bildschirmbreite, aber nie schmaler als 300px und nie breiter als 480px */
+  --panel-width: clamp(300px, 24vw, 480px);
+  --panel-spacing: clamp(10px, 1.2vw, 24px);
+  --bg-dark: rgba(20, 24, 30, 0.95);
+  --border-color: #2a3441;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #12161a;
+  color: #fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+}
+
+#map {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Sidebar & Collapse-Animation */
+.sidebar {
+  position: absolute;
+  top: var(--panel-spacing);
+  right: var(--panel-spacing);
+  z-index: 1000;
+  width: var(--panel-width);
+  max-height: calc(100vh - (var(--panel-spacing) * 2));
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease-in-out;
+  box-sizing: border-box;
+}
+
+/* Rutscht um die dynamische Breite plus Abstand aus dem Viewport */
+.sidebar.collapsed {
+  transform: translateX(calc(100% + var(--panel-spacing) + 5px));
+  pointer-events: none;
+}
+
+/* Toggle Button passt sich dem gleichen Abstand an */
+.toggle-btn {
+  position: absolute;
+  top: var(--panel-spacing);
+  right: var(--panel-spacing);
+  z-index: 1001;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+/* Greift zuverlässig auf alle Kacheln der Karte zu */
+.leaflet-tile-pane {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
+}
+
+.leaflet-container {
+  background-color: #12161a !important;
+}
+
+.toggle-btn:hover {
+  background: #202b38;
+}
+
+/* Header & Content */
+.sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.sidebar-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.balance-box {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.status-box {
+  font-size: 12px;
+  color: #90caf9;
+  min-height: 16px;
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Job Liste */
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.job-card {
+  background: #18202a;
+  border: 1px solid #334155;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.job-card:hover {
+  border-color: #00bcd4;
+  background: #202b38;
+}
+
+.job-card.illegal { border-left: 3px solid #f44336; }
+.job-card.legal { border-left: 3px solid #00e676; }
+
+.job-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.job-meta {
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Ereignis-Ticker: Feste Breiten & kein Ausbrechen */
+.ticker-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.log-list {
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 110px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.log-entry {
+  line-height: 1.35;
+  word-break: break-word;     /* Verhindert horizontales Strecken */
+  overflow-wrap: anywhere;   /* Bricht auch lange Wörter/Titel um */
+  white-space: normal;
+  padding-right: 4px;
+}
+
+/* Buttons */
+.btn-secondary {
+  background: #334155;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.btn-secondary:hover {
+  background: #475569;
+}
+
+.leaflet-container {
+  background-color: #12161a !important;
+}
+
+/* Tab Buttons */
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(15, 20, 25, 0.4);
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn:hover { color: #fff; }
+.tab-btn.active {
+  color: #00e5ff;
+  border-bottom: 2px solid #00e5ff;
+}
+
+/* Modal Popup */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-box {
+  background: #18202a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 16px;
+  width: clamp(320px, 28vw, 460px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+}
+
+.custom-select {
+  width: 100%;
+  padding: 8px 10px;
+  background: #0f141a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+.custom-select:focus {
+  border-color: #00bcd4;
+  outline: none;
+}

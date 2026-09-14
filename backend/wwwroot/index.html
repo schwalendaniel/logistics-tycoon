@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Logistics Tycoon</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <button id="open-sidebar-btn" class="toggle-btn" style="display: none;">☰ Dispo-Menü</button>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <h3 class="panel-title">Disponenten-Zentrale</h3>
+      <button id="close-sidebar-btn" class="close-btn" title="Einklappen">✕</button>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+      <button data-tab="jobs" class="tab-btn active">Aufträge</button>
+      <button data-tab="fleet" class="tab-btn">Fuhrpark</button>
+      <button data-tab="drivers" class="tab-btn">Fahrer</button>
+    </nav>
+
+    <div class="sidebar-body">
+      <div>
+        <div id="balance-box" class="balance-box"></div>
+        <div id="status-box" class="status-box"></div>
+      </div>
+
+      <!-- Tab: Aufträge -->
+      <div id="tab-jobs" class="tab-pane active">
+        <div class="section-label">Verfügbare Fracht</div>
+        <div id="job-list" class="job-list"></div>
+        <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Aufträge neu würfeln</button>
+      </div>
+
+      <!-- Tab: Fuhrpark -->
+      <div id="tab-fleet" class="tab-pane" style="display: none;">
+        <div class="section-label">Fahrzeuge im Fuhrpark</div>
+        <div id="truck-list" class="job-list"></div>
+      </div>
+
+      <!-- Tab: Fahrer -->
+      <div id="tab-drivers" class="tab-pane" style="display: none;">
+        <div class="section-label">Angestellte Fahrer</div>
+        <div id="driver-list" class="job-list"></div>
+      </div>
+
+      <!-- Ticker -->
+      <div class="ticker-section">
+        <div class="section-label">Ereignisse</div>
+        <div id="log-list" class="log-list"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal: Tour disponieren -->
+  <div id="dispatch-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4 id="modal-job-title" style="margin: 0; color: #00e5ff;">Auftrag disponieren</h4>
+        <button id="close-modal-btn" class="close-btn">✕</button>
+      </div>
+      
+      <div id="modal-job-details" style="font-size: 12px; margin: 10px 0; color: #cbd5e1; line-height: 1.4;"></div>
+
+      <label class="section-label">Fahrzeug wählen:</label>
+      <select id="select-truck" class="custom-select"></select>
+
+      <label class="section-label" style="margin-top: 10px;">Fahrer zuweisen:</label>
+      <select id="select-driver" class="custom-select"></select>
+
+      <div id="modal-warning" style="font-size: 11px; color: #ff5252; margin-top: 8px; min-height: 14px;"></div>
+
+      <div style="display: flex; gap: 8px; margin-top: 14px;">
+        <button id="cancel-dispatch-btn" class="btn-secondary" style="flex: 1;">Abbrechen</button>
+        <button id="confirm-dispatch-btn" class="btn-primary" style="flex: 1; margin: 0;">Starten</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

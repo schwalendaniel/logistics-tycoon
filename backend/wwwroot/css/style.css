@@ -238,9 +238,12 @@ body, html {
   border-bottom: 2px solid transparent;
 }
 .tab-btn:hover { color: #fff; }
-.tab-btn.active {
-  color: #00e5ff;
-  border-bottom: 2px solid #00e5ff;
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
 }
 
 /* Modal Popup */
@@ -270,7 +273,56 @@ body, html {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #334155;
-  padding-bottom: 8px;
+            padding-bottom: 8px;
+}
+
+.btn-primary {
+  background: #00838f;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.btn-primary:hover {
+  background: #00acc1;
+}
+
+.btn-tiny {
+  background: #334155;
+  border: none;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.btn-tiny:hover { background: #475569; }
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.clock-box {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.job-card.static {
+  cursor: default;
+}
+
+.job-card.static:hover {
+  border-color: #334155;
+  background: #18202a;
 }
 
 .custom-select {

@@ -6,7 +6,7 @@ const translations = {
     activeToursCount: "Aktive Touren: {count}",
     readyToDispatch: "Wähle einen Auftrag zum Starten",
     availableFreight: "Verfügbare Fracht",
-    refreshJobs: "Aufträge neu würfeln",
+    refreshJobs: "Börse auffüllen",
     loadingJobs: "Lade Frachtbörse...",
     errorDispatching: "Fehler beim Starten der Tour.",
     legalTag: "Legal",

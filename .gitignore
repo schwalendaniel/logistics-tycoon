@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Local game save
+**/game.db
+**/game.db-*
+
 # User-specific files
 *.rsuser
 *.suo

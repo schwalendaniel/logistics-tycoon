@@ -23,11 +23,13 @@
       <button data-tab="jobs" class="tab-btn active">Aufträge</button>
       <button data-tab="fleet" class="tab-btn">Fuhrpark</button>
       <button data-tab="drivers" class="tab-btn">Fahrer</button>
+      <button data-tab="market" class="tab-btn">Markt</button>
     </nav>
 
     <div class="sidebar-body">
       <div>
         <div id="balance-box" class="balance-box"></div>
+        <div id="clock-box" class="clock-box"></div>
         <div id="status-box" class="status-box"></div>
       </div>
 
@@ -35,19 +37,29 @@
       <div id="tab-jobs" class="tab-pane active">
         <div class="section-label">Verfügbare Fracht</div>
         <div id="job-list" class="job-list"></div>
-        <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Aufträge neu würfeln</button>
+        <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Börse auffüllen</button>
       </div>
 
       <!-- Tab: Fuhrpark -->
-      <div id="tab-fleet" class="tab-pane" style="display: none;">
+      <div id="tab-fleet" class="tab-pane">
         <div class="section-label">Fahrzeuge im Fuhrpark</div>
         <div id="truck-list" class="job-list"></div>
       </div>
 
       <!-- Tab: Fahrer -->
-      <div id="tab-drivers" class="tab-pane" style="display: none;">
+      <div id="tab-drivers" class="tab-pane">
         <div class="section-label">Angestellte Fahrer</div>
         <div id="driver-list" class="job-list"></div>
+      </div>
+
+      <div id="tab-market" class="tab-pane">
+        <div class="section-label">Fahrzeuge kaufen</div>
+        <div id="market-trucks" class="job-list"></div>
+        <div class="section-label" style="margin-top: 10px;">Fahrer einstellen</div>
+        <div id="market-drivers" class="job-list"></div>
+        <button id="refresh-hire-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Bewerber neu laden</button>
+        <div class="section-label" style="margin-top: 10px;">Depots</div>
+        <div id="market-depots" class="job-list"></div>
       </div>
 
       <!-- Ticker -->

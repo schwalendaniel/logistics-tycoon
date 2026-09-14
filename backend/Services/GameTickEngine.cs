@@ -4,13 +4,15 @@ namespace LogisticsGame.Api.Services;
 
 public class GameTickEngine : BackgroundService
 {
-    private readonly GameState _gameState;
+    private readonly GameState _state;
+    private readonly PersistenceService _persistence;
     private readonly ILogger<GameTickEngine> _logger;
     private readonly Random _random = new();
 
-    public GameTickEngine(GameState gameState, ILogger<GameTickEngine> logger)
+    public GameTickEngine(GameState state, PersistenceService persistence, ILogger<GameTickEngine> logger)
     {
-        _gameState = gameState;
+        _state = state;
+        _persistence = persistence;
         _logger = logger;
     }
 
@@ -20,87 +22,290 @@ public class GameTickEngine : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
         {
+            try
+            {
+                TickOnce();
+                if (_state.Company.TickCount % 10 == 0)
+                {
+                    await _persistence.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Tick fehlgeschlagen");
+            }
+        }
+    }
+
+    private void TickOnce()
+    {
+        lock (_state.Sync)
+        {
+            _state.Company.TickCount++;
+            AdvanceClock();
+            AdvanceMaintenance();
             UpdateActiveTours();
+        }
+    }
+
+    private void AdvanceClock()
+    {
+        _state.Company.GameHour++;
+        if (_state.Company.GameHour < 24) return;
+
+        _state.Company.GameHour = 0;
+        _state.Company.GameDay++;
+
+        foreach (var driver in _state.Drivers)
+        {
+            if (driver.Status == DriverStatus.SickLeave)
+            {
+                driver.SickLeaveDaysRemaining = Math.Max(0, driver.SickLeaveDaysRemaining - 1);
+                if (driver.SickLeaveDaysRemaining == 0)
+                {
+                    driver.Status = DriverStatus.Available;
+                    driver.Health = Math.Max(driver.Health, 55);
+                    _state.AddLog($"{driver.Name} ist wieder einsatzbereit.");
+                }
+            }
+
+            if (driver.Status == DriverStatus.Arrested)
+            {
+                driver.SickLeaveDaysRemaining = Math.Max(0, driver.SickLeaveDaysRemaining - 1);
+                if (driver.SickLeaveDaysRemaining == 0)
+                {
+                    driver.Status = DriverStatus.Available;
+                    _state.AddLog($"{driver.Name} wurde aus der Haft entlassen.");
+                }
+            }
+
+            if (driver.Status is DriverStatus.Available or DriverStatus.Resting)
+            {
+                driver.Health = Math.Min(100, driver.Health + 2);
+            }
+
+            if (driver.CurrentSalary + 50m < driver.ExpectedSalary)
+            {
+                driver.Morale = Math.Max(0, driver.Morale - 3);
+            }
+            else if (driver.CurrentSalary >= driver.ExpectedSalary)
+            {
+                driver.Morale = Math.Min(100, driver.Morale + 1);
+            }
+
+            var assigned = _state.Trucks.FirstOrDefault(t => t.AssignedDriverId == driver.Id);
+            if (assigned != null && assigned.LastMaintenanceLevel == MaintenanceLevel.Premium && assigned.CabinCleanliness > 70)
+            {
+                driver.Morale = Math.Min(100, driver.Morale + 1);
+                driver.Health = Math.Min(100, driver.Health + 1);
+            }
+        }
+
+        if (_state.Company.GameDay % 30 == 0)
+        {
+            PayMonthlySalaries();
+        }
+    }
+
+    private void PayMonthlySalaries()
+    {
+        decimal total = 0;
+        foreach (var driver in _state.Drivers.Where(d => d.Status != DriverStatus.Arrested))
+        {
+            total += driver.CurrentSalary;
+        }
+
+        if (total <= 0) return;
+        _state.PostLedger(-total, LedgerCategory.Wage, $"Monatsgehälter Tag {_state.Company.GameDay}");
+        _state.AddLog($"Lohnlauf: -{total:N2} €");
+    }
+
+    private void AdvanceMaintenance()
+    {
+        foreach (var truck in _state.Trucks.Where(t => t.Status == TruckStatus.Maintenance))
+        {
+            truck.MaintenanceTicksRemaining--;
+            if (truck.MaintenanceTicksRemaining > 0) continue;
+            truck.Status = TruckStatus.Idle;
+            _state.AddLog($"Wartung fertig: {truck.LicensePlate}");
         }
     }
 
     private void UpdateActiveTours()
     {
-        foreach (var tour in _gameState.ActiveTours.Values)
+        foreach (var tour in _state.ActiveTours.Values.ToList())
         {
-            if (tour.IsFinished) continue;
-
-            tour.CurrentRouteIndex++;
-            double stepDistance = tour.Route.DistanceKm / Math.Max(1, tour.Route.Geometry.Count);
-
-            // 1. Kilometer & Verschleiß tracken
-            tour.Truck.TotalKilometers += stepDistance;
-            tour.Truck.TireCondition = Math.Max(0, tour.Truck.TireCondition - 0.05);
-            tour.Truck.EngineCondition = Math.Max(0, tour.Truck.EngineCondition - 0.02);
-
-            // Kabinenhygiene drückt die Fahrer-Gesundheit
-            if (tour.Truck.CabinCleanliness < 40.0)
-            {
-                tour.Driver.Health = Math.Max(10, tour.Driver.Health - 1);
-            }
-
-            // 2. Spritverbrauch (DrivingSkill senkt Verbrauch bis zu 25%)
-            double skillFactor = 1.0 - (tour.Driver.DrivingSkill / 400.0);
-            double fuelBurned = (stepDistance * 0.32) * skillFactor; // ca. 32L/100km Basis
-            tour.Truck.CurrentFuelLiters = Math.Max(0, tour.Truck.CurrentFuelLiters - fuelBurned);
-
-            decimal fuelCost = (decimal)fuelBurned * 1.75m; // 1,75 €/Liter Diesel
-            _gameState.CompanyBalance -= fuelCost;
-
-            // 3. Schwarzmarkt-Zollrazzia (auf halber Strecke)
-            if (tour.Job.IsIllegal && tour.CurrentRouteIndex == tour.Route.Geometry.Count / 2)
-            {
-                double roll = _random.NextDouble() * 100.0;
-                if (roll <= tour.Job.InspectionRiskPercentage)
-                {
-                    // Zollkontrolle findet statt! Loyalty-Check: Hält der Fahrer dicht?
-                    bool driverConfesses = (_random.Next(0, 100) > tour.Driver.Loyalty);
-
-                    if (driverConfesses)
-                    {
-                        _gameState.CompanyBalance -= tour.Job.PenaltyFine;
-                        tour.Truck.Status = TruckStatus.Impounded;
-                        tour.Driver.Status = DriverStatus.Arrested;
-                        tour.Job.Status = JobStatus.Failed;
-
-                        _gameState.AddLog($"ZOLL-RAZZIA: {tour.Driver.Name} hat gestanden! LKW {tour.Truck.LicensePlate} beschlagnahmt. Strafe: -{tour.Job.PenaltyFine:N2} €");
-                        _gameState.ActiveTours.TryRemove(tour.Id, out _);
-                        continue;
-                    }
-                    else
-                    {
-                        _gameState.AddLog($"KONTROLLE: {tour.Driver.Name} blieb eiskalt! Die Fracht wurde nicht entdeckt.");
-                    }
-                }
-            }
-
-            // 4. Tour abgeschlossen
             if (tour.IsFinished)
             {
-                tour.Job.Status = JobStatus.Completed;
-                _gameState.CompanyBalance += tour.Job.Revenue;
+                CompleteTour(tour, seized: false);
+                continue;
+            }
 
-                // Fahrer-Zustand nach Tour prüfen
-                if (tour.Driver.Health < 30)
-                {
-                    tour.Driver.Status = DriverStatus.SickLeave;
-                    tour.Driver.SickLeaveDaysRemaining = 3;
-                    _gameState.AddLog($"Fahrer {tour.Driver.Name} meldet sich nach Tour krankheitsbedingt ab.");
-                }
-                else
-                {
-                    tour.Driver.Status = DriverStatus.Available;
-                }
+            if (tour.BreakdownTicksRemaining > 0)
+            {
+                tour.BreakdownTicksRemaining--;
+                continue;
+            }
 
-                tour.Truck.Status = TruckStatus.Idle;
-                _gameState.AddLog($"Tour beendet: {tour.Job.Title} (+{tour.Job.Revenue:N2} €)");
-                _gameState.ActiveTours.TryRemove(tour.Id, out _);
+            if (tour.Truck.CurrentFuelLiters <= 0)
+            {
+                _state.AddLog($"{tour.Truck.LicensePlate} liegt ohne Sprit. Tour abgebrochen.");
+                FailTour(tour);
+                continue;
+            }
+
+            var durationMinutes = Math.Max(12, tour.Route.EstimatedDurationMinutes);
+            durationMinutes *= GameEconomy.SpeedFactor(tour.Truck.Type);
+            durationMinutes *= GameEconomy.ReliabilityDurationFactor(tour.Driver.Reliability);
+
+            // 1 Tick = 1 Spielstunde → Fortschritt in Minuten
+            var minutesPerTick = 60.0;
+            var delta = minutesPerTick / durationMinutes;
+            var previous = tour.Progress;
+            tour.Progress = Math.Min(1.0, tour.Progress + delta);
+
+            var geomCount = Math.Max(2, tour.Route.Geometry.Count);
+            tour.CurrentRouteIndex = Math.Clamp(
+                (int)Math.Round(tour.Progress * (geomCount - 1)),
+                0,
+                geomCount - 1);
+
+            var stepKm = tour.Route.DistanceKm * delta;
+            tour.Truck.TotalKilometers += stepKm;
+            tour.Truck.TireCondition = Math.Max(0, tour.Truck.TireCondition - stepKm * 0.012);
+            tour.Truck.EngineCondition = Math.Max(0, tour.Truck.EngineCondition - stepKm * 0.006);
+            tour.Truck.CabinCleanliness = Math.Max(0, tour.Truck.CabinCleanliness - stepKm * 0.008);
+
+            if (tour.Truck.CabinCleanliness < 40.0)
+            {
+                tour.Driver.Health = Math.Max(5, tour.Driver.Health - 1);
+            }
+
+            var hours = minutesPerTick / 60.0;
+            var stressHit = Math.Max(0, (70 - tour.Driver.StressResistance) / 80.0);
+            tour.Driver.Health = Math.Max(5, tour.Driver.Health - (int)Math.Round(hours * (0.4 + stressHit)));
+
+            var skillFactor = 1.0 - (tour.Driver.DrivingSkill / 400.0);
+            var fuelBurned = stepKm * GameEconomy.FuelLitersPerKm(tour.Truck.Type) * skillFactor;
+            if (tour.Truck.EngineCondition < 50) fuelBurned *= 1.15;
+            tour.Truck.CurrentFuelLiters = Math.Max(0, tour.Truck.CurrentFuelLiters - fuelBurned);
+            tour.AccumulatedFuelLiters += fuelBurned;
+            tour.AccumulatedFuelCost += (decimal)fuelBurned * GameEconomy.DieselPerLiter;
+            tour.AccumulatedToll += GameEconomy.TollPerKm(tour.Truck.Type) * (decimal)stepKm;
+            tour.AccumulatedWear += GameEconomy.WearCostPerKm(tour.Truck) * (decimal)stepKm;
+
+            MaybeBreakdown(tour);
+            MaybeInspect(tour, previous);
+            if (tour.Truck.Status == TruckStatus.Impounded || !_state.ActiveTours.ContainsKey(tour.Id))
+            {
+                continue;
+            }
+
+            if (tour.IsFinished)
+            {
+                CompleteTour(tour, seized: false);
             }
         }
+    }
+
+    private void MaybeBreakdown(ActiveTour tour)
+    {
+        var risk = 0.0;
+        if (tour.Truck.EngineCondition < 35) risk += 0.04;
+        if (tour.Truck.TireCondition < 25) risk += 0.05;
+        risk *= 1.0 - tour.Driver.DrivingSkill / 140.0;
+        if (risk <= 0 || _random.NextDouble() > risk) return;
+
+        tour.BreakdownTicksRemaining = _random.Next(2, 6);
+        tour.Driver.Morale = Math.Max(5, tour.Driver.Morale - 4);
+        _state.AddLog($"Panne: {tour.Truck.LicensePlate} ({tour.Driver.Name}) — Verzögerung.");
+    }
+
+    private void MaybeInspect(ActiveTour tour, double previousProgress)
+    {
+        if (!tour.Job.IsIllegal || tour.InspectionResolved) return;
+        if (!(previousProgress < 0.5 && tour.Progress >= 0.5)) return;
+
+        tour.InspectionResolved = true;
+        var roll = _random.NextDouble() * 100.0;
+        if (roll > tour.Job.InspectionRiskPercentage)
+        {
+            return;
+        }
+
+        var driverConfesses = _random.Next(0, 100) > tour.Driver.Loyalty;
+        if (!driverConfesses)
+        {
+            _state.AddLog($"KONTROLLE: {tour.Driver.Name} blieb eiskalt! Die Fracht wurde nicht entdeckt.");
+            return;
+        }
+
+        _state.PostLedger(-tour.Job.PenaltyFine, LedgerCategory.Fine, $"Strafe {tour.Job.Title}");
+        tour.Truck.Status = TruckStatus.Impounded;
+        tour.Driver.Status = DriverStatus.Arrested;
+        tour.Driver.SickLeaveDaysRemaining = 4;
+        tour.Job.Status = JobStatus.Failed;
+        _state.AddLog($"ZOLL-RAZZIA: {tour.Driver.Name} hat gestanden! {tour.Truck.LicensePlate} beschlagnahmt. Strafe: -{tour.Job.PenaltyFine:N2} €");
+        _state.ActiveTours.TryRemove(tour.Id, out _);
+    }
+
+    private void FailTour(ActiveTour tour)
+    {
+        tour.Job.Status = JobStatus.Failed;
+        tour.Truck.Status = TruckStatus.Idle;
+        tour.Truck.CurrentCity = tour.Job.OriginCity;
+        FinishDriverAfterTour(tour.Driver, tour);
+        _state.ActiveTours.TryRemove(tour.Id, out _);
+    }
+
+    private void CompleteTour(ActiveTour tour, bool seized)
+    {
+        if (seized) return;
+        if (tour.Truck.Status == TruckStatus.Impounded) return;
+
+        tour.Job.Status = JobStatus.Completed;
+        tour.Truck.Status = TruckStatus.Idle;
+        tour.Truck.CurrentCity = tour.Job.DestinationCity;
+
+        var fuel = Math.Round(tour.AccumulatedFuelCost, 2);
+        var toll = Math.Round(tour.AccumulatedToll, 2);
+        var wear = Math.Round(tour.AccumulatedWear, 2);
+        var net = tour.Job.Revenue - fuel - toll - wear;
+
+        _state.PostLedger(tour.Job.Revenue, LedgerCategory.Revenue, tour.Job.Title);
+        if (fuel > 0) _state.PostLedger(-fuel, LedgerCategory.Fuel, $"Diesel {tour.Truck.LicensePlate}");
+        if (toll > 0) _state.PostLedger(-toll, LedgerCategory.Toll, $"Maut {tour.Truck.LicensePlate}");
+        if (wear > 0) _state.PostLedger(-wear, LedgerCategory.Wear, $"Verschleiß {tour.Truck.LicensePlate}");
+
+        FinishDriverAfterTour(tour.Driver, tour);
+        var deadhead = tour.DeadheadKm > 1 ? $" | Leerfahrt {tour.DeadheadKm:0.0} km" : "";
+        _state.AddLog($"Tour beendet: {tour.Job.Title} | Netto {net:N2} €{deadhead}");
+        _state.ActiveTours.TryRemove(tour.Id, out _);
+    }
+
+    private void FinishDriverAfterTour(Driver driver, ActiveTour tour)
+    {
+        if (driver.Status == DriverStatus.Arrested) return;
+
+        var durationHours = Math.Max(1, tour.Route.EstimatedDurationMinutes / 60.0);
+        if (durationHours > 6) driver.Morale = Math.Max(0, driver.Morale - 4);
+
+        if (driver.Health < 30)
+        {
+            driver.Status = DriverStatus.SickLeave;
+            driver.SickLeaveDaysRemaining = 2 + (30 - driver.Health) / 10;
+            _state.AddLog($"{driver.Name} ist nach der Tour krankgeschrieben ({driver.SickLeaveDaysRemaining} Tage).");
+            return;
+        }
+
+        if (driver.Morale < 22 && driver.Health >= 40 && _random.NextDouble() < 0.45)
+        {
+            driver.Status = DriverStatus.SickLeave;
+            driver.SickLeaveDaysRemaining = 1;
+            _state.AddLog($"{driver.Name} macht blau (niedrige Moral).");
+            return;
+        }
+
+        driver.Status = DriverStatus.Available;
     }
 }

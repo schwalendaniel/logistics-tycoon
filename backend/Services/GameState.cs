@@ -10,80 +10,184 @@ public class ActiveTour
     public RouteInfo Route { get; set; } = default!;
     public Truck Truck { get; set; } = default!;
     public Driver Driver { get; set; } = default!;
-    public int CurrentRouteIndex { get; set; } = 0;
-    public double ProgressPercentage => Route.Geometry.Count == 0 ? 100 : (double)CurrentRouteIndex / (Route.Geometry.Count - 1) * 100.0;
-    public bool IsFinished => CurrentRouteIndex >= Route.Geometry.Count - 1;
+    public double Progress { get; set; }
+    public int CurrentRouteIndex { get; set; }
+    public double AccumulatedFuelLiters { get; set; }
+    public decimal AccumulatedFuelCost { get; set; }
+    public decimal AccumulatedToll { get; set; }
+    public decimal AccumulatedWear { get; set; }
+    public double DeadheadKm { get; set; }
+    public int BreakdownTicksRemaining { get; set; }
+    public bool InspectionResolved { get; set; }
+
+    public double ProgressPercentage => Progress * 100.0;
+    public bool IsFinished => Progress >= 1.0;
+}
+
+public class DriverProspect
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = string.Empty;
+    public int DrivingSkill { get; set; }
+    public int Reliability { get; set; }
+    public int StressResistance { get; set; }
+    public int Loyalty { get; set; }
+    public decimal AskingSalary { get; set; }
+    public decimal SigningFee { get; set; }
+}
+
+public class TruckCatalogItem
+{
+    public string CatalogId { get; set; } = string.Empty;
+    public string ModelName { get; set; } = string.Empty;
+    public TruckType Type { get; set; }
+    public double MaxPayloadTons { get; set; }
+    public double FuelCapacityLiters { get; set; }
+    public decimal Price { get; set; }
 }
 
 public class GameState
 {
-    public decimal CompanyBalance { get; set; } = 25000.00m;
+    public readonly object Sync = new();
 
-    public List<Truck> Trucks { get; } = new()
+    public Company Company { get; set; } = new();
+
+    public decimal CompanyBalance
     {
-        new Truck 
-        { 
-            ModelName = "Hauler 40T", 
-            LicensePlate = "K-LT 101", 
-            Type = TruckType.SemiTruck,
-            MaxPayloadTons = 24.0,
-            FuelCapacityLiters = 600,
-            CurrentFuelLiters = 450,
-            EngineCondition = 95.0,
-            TireCondition = 90.0,
-            Status = TruckStatus.Idle
+        get => Company.Balance;
+        set => Company.Balance = value;
+    }
+
+    public List<Truck> Trucks { get; } = new();
+    public List<Driver> Drivers { get; } = new();
+    public List<Job> Jobs { get; } = new();
+    public List<Depot> Depots { get; } = new();
+    public List<LedgerEntry> Ledger { get; } = new();
+    public ConcurrentDictionary<Guid, ActiveTour> ActiveTours { get; } = new();
+    public ConcurrentQueue<string> EventLog { get; } = new();
+    public List<DriverProspect> HirePool { get; } = new();
+
+    public static readonly TruckCatalogItem[] TruckCatalog =
+    [
+        new()
+        {
+            CatalogId = "van-courier",
+            ModelName = "Courier 3.5T",
+            Type = TruckType.Van,
+            MaxPayloadTons = 1.2,
+            FuelCapacityLiters = 75,
+            Price = 18_500m
         },
-        new Truck 
-        { 
-            ModelName = "Transporter 12T", 
-            LicensePlate = "B-LT 202", 
+        new()
+        {
+            CatalogId = "rigid-12",
+            ModelName = "Transporter 12T",
             Type = TruckType.Rigid,
             MaxPayloadTons = 8.0,
             FuelCapacityLiters = 250,
-            CurrentFuelLiters = 180,
-            EngineCondition = 82.0,
-            TireCondition = 75.0,
-            Status = TruckStatus.Idle
-        }
-    };
-
-    public List<Driver> Drivers { get; } = new()
-    {
-        new Driver 
-        { 
-            Name = "Markus Weber", 
-            MonthlySalary = 3200m,
-            CurrentSalary = 3200m,
-            DrivingSkill = 75,
-            Loyalty = 80,
-            StressResistance = 60,
-            Health = 100,
-            Morale = 85,
-            Status = DriverStatus.Available
+            Price = 46_000m
         },
-        new Driver 
-        { 
-            Name = "Elena Becker", 
-            MonthlySalary = 3600m,
-            CurrentSalary = 3600m,
-            DrivingSkill = 88,
-            Loyalty = 40, // Risikoreich bei Razzien!
-            StressResistance = 75,
-            Health = 95,
-            Morale = 90,
-            Status = DriverStatus.Available
+        new()
+        {
+            CatalogId = "semi-40",
+            ModelName = "Hauler 40T",
+            Type = TruckType.SemiTruck,
+            MaxPayloadTons = 24.0,
+            FuelCapacityLiters = 600,
+            Price = 98_000m
         }
-    };
+    ];
 
-    public ConcurrentDictionary<Guid, ActiveTour> ActiveTours { get; } = new();
-    public ConcurrentQueue<string> EventLog { get; } = new();
+    public static readonly string[] DepotMarketCities = ["Hamburg", "München", "Leipzig"];
+    public const decimal DepotPrice = 28_000m;
+
+    public void SeedNewGame()
+    {
+        Company = new Company
+        {
+            Balance = 25_000m,
+            HomeCity = "Frankfurt",
+            GameDay = 1,
+            GameHour = 8
+        };
+
+        Trucks.Clear();
+        Drivers.Clear();
+        Jobs.Clear();
+        Depots.Clear();
+        Ledger.Clear();
+        ActiveTours.Clear();
+        while (EventLog.TryDequeue(out _)) { }
+
+        var driver = new Driver
+        {
+            Name = "Jonas Klein",
+            MonthlySalary = 2400m,
+            CurrentSalary = 2400m,
+            ExpectedSalary = 2400m,
+            DrivingSkill = 42,
+            Reliability = 48,
+            StressResistance = 40,
+            Loyalty = 55,
+            Health = 100,
+            Morale = 72,
+            Status = DriverStatus.Available
+        };
+        driver.ExpectedSalary = GameEconomy.ExpectedSalaryFromSkills(driver);
+        Drivers.Add(driver);
+
+        var van = new Truck
+        {
+            ModelName = "Courier 3.5T",
+            LicensePlate = "F-LT 001",
+            Type = TruckType.Van,
+            MaxPayloadTons = 1.2,
+            FuelCapacityLiters = 75,
+            CurrentFuelLiters = 62,
+            EngineCondition = 88,
+            TireCondition = 80,
+            CabinCleanliness = 90,
+            Status = TruckStatus.Idle,
+            CurrentCity = "Frankfurt",
+            AssignedDriverId = driver.Id,
+            PurchasePrice = 18_500m
+        };
+        Trucks.Add(van);
+
+        Depots.Add(new Depot { CityName = "Frankfurt", IsHome = true });
+        AddLog("Neues Unternehmen in Frankfurt. Ein Van und Jonas Klein stehen bereit.");
+        PostLedger(0m, LedgerCategory.Revenue, "Spielstart");
+    }
 
     public void AddLog(string message)
     {
-        EventLog.Enqueue($"[{DateTime.Now:HH:mm:ss}] {message}");
-        while (EventLog.Count > 20)
+        EventLog.Enqueue($"[Tag {Company.GameDay} {Company.GameHour:00}:00] {message}");
+        while (EventLog.Count > GameEconomy.MaxEventLog)
         {
             EventLog.TryDequeue(out _);
         }
+    }
+
+    public void PostLedger(decimal amount, LedgerCategory category, string description)
+    {
+        Company.Balance += amount;
+        Ledger.Add(new LedgerEntry
+        {
+            Amount = amount,
+            Category = category,
+            Description = description
+        });
+        while (Ledger.Count > 80)
+        {
+            Ledger.RemoveAt(0);
+        }
+    }
+
+    public bool TryDebit(decimal cost, LedgerCategory category, string description)
+    {
+        if (cost < 0) cost = 0;
+        if (Company.Balance < cost) return false;
+        PostLedger(-cost, category, description);
+        return true;
     }
 }

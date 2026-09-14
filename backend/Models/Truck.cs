@@ -15,14 +15,16 @@ public class Truck
     public double TireCondition { get; set; } = 100.0;
     public double TotalKilometers { get; set; } = 0.0;
 
-    // Zugewiesener Fahrer
     public Guid? AssignedDriverId { get; set; }
 
     public TruckStatus Status { get; set; } = TruckStatus.Idle;
 
-    // Zustand & Kabinenhygiene
-    public double CabinCleanliness { get; set; } = 100.0; // Filter/Klima-Zustand (beeinflusst Fahrer-Gesundheit)
+    public double CabinCleanliness { get; set; } = 100.0;
     public MaintenanceLevel LastMaintenanceLevel { get; set; } = MaintenanceLevel.Standard;
+
+    public string CurrentCity { get; set; } = "Frankfurt";
+    public int MaintenanceTicksRemaining { get; set; }
+    public decimal PurchasePrice { get; set; }
 }
 
 public enum TruckType

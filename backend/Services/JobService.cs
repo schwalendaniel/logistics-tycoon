@@ -2,9 +2,16 @@ using LogisticsGame.Api.Models;
 
 namespace LogisticsGame.Api.Services;
 
+public interface IJobService
+{
+    Task<List<Job>> GenerateJobsAsync(int count);
+    Task EnsureBoardAsync(int targetOpen = GameEconomy.TargetOpenJobs);
+}
+
 public class JobService : IJobService
 {
     private readonly IRoutingService _routingService;
+    private readonly GameState _gameState;
     private readonly Random _random = new();
 
     public static readonly Dictionary<string, Coordinates> GermanCities = new()
@@ -21,50 +28,94 @@ public class JobService : IJobService
         { "Bremen", new Coordinates(53.0793, 8.8017) }
     };
 
-    private readonly string[] _legalCargo = { "Autoteile", "Maschinenbau-Komponenten", "Elektronik", "Lebensmittel", "Möbel", "Pharmaprodukte" };
-    private readonly string[] _contrabandCargo = { "Unversteuerte Zigaretten", "Nicht deklarierte Luxusuhren", "Gefälschte Elektronik", "Schwarzmarkt-Medikamente" };
+    private readonly string[] _legalCargo = ["Autoteile", "Maschinenbau-Komponenten", "Elektronik", "Lebensmittel", "Möbel", "Pharmaprodukte"];
+    private readonly string[] _contrabandCargo = ["Unversteuerte Zigaretten", "Nicht deklarierte Luxusuhren", "Gefälschte Elektronik", "Schwarzmarkt-Medikamente"];
 
-    public JobService(IRoutingService routingService)
+    public JobService(IRoutingService routingService, GameState gameState)
     {
         _routingService = routingService;
+        _gameState = gameState;
     }
 
-    public async Task<List<Job>> GenerateAvailableJobsAsync(int count = 5)
+    public async Task EnsureBoardAsync(int targetOpen = GameEconomy.TargetOpenJobs)
+    {
+        ExpireJobs();
+        int open;
+        lock (_gameState.Sync)
+        {
+            open = _gameState.Jobs.Count(j => j.Status == JobStatus.Open);
+        }
+
+        if (open >= targetOpen) return;
+
+        var generated = await GenerateJobsAsync(targetOpen - open);
+        lock (_gameState.Sync)
+        {
+            _gameState.Jobs.AddRange(generated);
+        }
+    }
+
+    public void ExpireJobs()
+    {
+        lock (_gameState.Sync)
+        {
+            foreach (var job in _gameState.Jobs.Where(j => j.Status == JobStatus.Open && j.ExpirationDate < DateTime.UtcNow))
+            {
+                job.Status = JobStatus.Failed;
+            }
+
+            _gameState.Jobs.RemoveAll(j =>
+                j.Status is JobStatus.Failed or JobStatus.Completed &&
+                j.ExpirationDate < DateTime.UtcNow.AddHours(-2));
+        }
+    }
+
+    public async Task<List<Job>> GenerateJobsAsync(int count)
     {
         var cityNames = GermanCities.Keys.ToList();
         var jobs = new List<Job>();
+        var maxPayload = 24.0;
+        lock (_gameState.Sync)
+        {
+            if (_gameState.Trucks.Count > 0)
+            {
+                maxPayload = _gameState.Trucks.Max(t => t.MaxPayloadTons);
+            }
+        }
 
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             var origin = cityNames[_random.Next(cityNames.Count)];
             string dest;
-            do {
+            do
+            {
                 dest = cityNames[_random.Next(cityNames.Count)];
             } while (dest == origin);
 
             var route = await _routingService.CalculateRouteAsync(GermanCities[origin], GermanCities[dest]);
             var distance = route?.DistanceKm ?? 300.0;
 
-            bool isContraband = _random.NextDouble() < 0.25; // 25% Chance auf Schwarzmarkt
-            double weight = Math.Round(_random.NextDouble() * 20.0 + 1.5, 1);
+            var isContraband = _random.NextDouble() < 0.22;
+            var weightCap = Math.Max(1.1, maxPayload);
+            var weight = Math.Round(_random.NextDouble() * Math.Min(18.0, weightCap * 0.9) + 0.4, 1);
+            if (weight > weightCap) weight = Math.Round(weightCap * 0.7, 1);
 
-            decimal baseRate = isContraband ? 4.2m : 1.9m; // Schwarzmarkt zahlt mehr als das Doppelte
-            decimal revenue = Math.Round((decimal)distance * baseRate * (decimal)(1 + weight * 0.05), 2);
+            var baseRate = isContraband ? 4.2m : 1.9m;
+            var revenue = Math.Round((decimal)distance * baseRate * (decimal)(1 + weight * 0.05), 2);
 
             jobs.Add(new Job
             {
-                Id = Guid.NewGuid(),
-                Title = isContraband 
-                    ? $"[SCHWARZMARKT] {_contrabandCargo[_random.Next(_contrabandCargo.Length)]}" 
+                Title = isContraband
+                    ? $"[SCHWARZMARKT] {_contrabandCargo[_random.Next(_contrabandCargo.Length)]}"
                     : _legalCargo[_random.Next(_legalCargo.Length)],
                 OriginCity = origin,
                 DestinationCity = dest,
                 CargoWeightTons = weight,
                 Revenue = revenue,
                 IsIllegal = isContraband,
-                InspectionRiskPercentage = isContraband ? Math.Round(_random.NextDouble() * 35.0 + 15.0, 1) : 0.0, // 15% - 50% Razzia-Risiko
+                InspectionRiskPercentage = isContraband ? Math.Round(_random.NextDouble() * 35.0 + 15.0, 1) : 0.0,
                 PenaltyFine = isContraband ? revenue * 2.5m : 0m,
-                ExpirationDate = DateTime.UtcNow.AddMinutes(30),
+                ExpirationDate = DateTime.UtcNow.AddMinutes(45),
                 Status = JobStatus.Open
             });
         }

@@ -372,19 +372,6 @@ body, html {
   color: #ffffff;
 }
 
-/* Großes modales Management Dashboard */
-.fullscreen-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 11, 19, 0.85);
-  backdrop-filter: blur(8px);
-  z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
 .management-window {
   background: #0f172a;
   border: 1px solid #334155;
@@ -498,12 +485,28 @@ body, html {
   object-fit: contain;
 }
 
+.vehicle-icon {
+  font-size: 52px;
+  line-height: 1;
+  filter: saturate(0.85);
+}
+
 .avatar-circle {
   width: 76px;
   height: 76px;
   border-radius: 50%;
   border: 3px solid #3b82f6;
   background: #0f172a;
+  display: grid;
+  place-items: center;
+  color: #7dd3fc;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.avatar-initials {
+  line-height: 1;
 }
 
 .mgmt-badge {
@@ -710,6 +713,140 @@ body, html {
 
 .mgmt-card:hover { border-color: #3b82f6; }
 
+.speed-sidebar-control {
+  padding: 10px 12px;
+  border: 1px solid #2a3441;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.speed-sidebar-label,
+.speed-sidebar-hints {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.speed-sidebar-label output {
+  color: #7dd3fc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#game-speed-slider {
+  width: 100%;
+  margin: 9px 0 3px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.speed-sidebar-hints {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.finance-view {
+  display: block;
+}
+
+.finance-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) repeat(2, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.finance-score,
+.finance-card,
+.finance-loan-row,
+.finance-bankruptcy {
+  padding: 16px;
+  border: 1px solid #28354f;
+  border-radius: 8px;
+  background: #172136;
+}
+
+.finance-score {
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.finance-score strong {
+  color: #7dd3fc;
+  font-size: 32px;
+}
+
+.finance-score span { color: #64748b; }
+.finance-rate { color: #fbbf24; font-weight: 700; margin-top: 12px; }
+.finance-limit { color: #cbd5e1; margin: 6px 0 12px; }
+.finance-card-danger { border-color: #7f1d1d; }
+
+.finance-borrow-row {
+  display: flex;
+  gap: 8px;
+}
+
+.custom-input {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  background: #0f141a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.finance-section-title { margin: 24px 0 8px; color: #cbd5e1; font-weight: 700; }
+.finance-loans { display: grid; gap: 8px; }
+.finance-loan-row,
+.finance-bankruptcy { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.finance-loan-row span,
+.finance-bankruptcy span { display: block; color: #94a3b8; font-size: 11px; margin-top: 4px; }
+.finance-bankruptcy { margin-top: 24px; border-color: #7f1d1d; }
+.danger-action { color: #fecaca; border-color: #991b1b; }
+.depot-hero { background: linear-gradient(135deg, #14532d 0%, #0f172a 100%); }
+.depot-icon { font-size: 72px; line-height: 1; }
+
+.personnel-controls {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.personnel-control-row {
+  display: flex;
+  gap: 8px;
+}
+
+.personnel-control-row .mgmt-action-btn {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .finance-summary { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .mgmt-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .mgmt-title-group {
+    flex: 1 1 100%;
+  }
+
+  .mgmt-tab-buttons {
+    flex: 1 1 auto;
+    overflow-x: auto;
+  }
+}
+
 .mgmt-card-hero {
   height: 110px;
   position: relative;
@@ -728,6 +865,50 @@ body, html {
   border-radius: 50%;
   border: 3px solid #3b82f6;
   background: #0f172a;
+}
+
+.mgmt-card-hero .vehicle-icon {
+  font-size: 88px;
+  line-height: 1;
+}
+
+.mgmt-card-hero:has(.vehicle-icon) {
+  min-height: 150px;
+}
+
+.mgmt-card-hero .avatar-circle {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #164e63, #0f172a);
+}
+
+.mgmt-card-hero .avatar-circle::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #fbbf8a;
+  box-shadow: 0 -3px 0 #172136;
+}
+
+.mgmt-card-hero .avatar-circle::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  width: 58px;
+  height: 40px;
+  border-radius: 50% 50% 0 0;
+  background: #38bdf8;
+}
+
+.mgmt-card-hero .avatar-initials {
+  position: relative;
+  z-index: 1;
+  margin-top: 48px;
+  color: #082f49;
+  font-size: 11px;
 }
 
 .mgmt-badge {

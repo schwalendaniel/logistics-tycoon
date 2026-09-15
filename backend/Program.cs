@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
 builder.Services.AddHttpClient("osrm", client =>
@@ -30,7 +30,9 @@ builder.Services.AddSingleton<PersistenceService>();
 builder.Services.AddSingleton<IJobService, JobService>();
 builder.Services.AddSingleton<FleetService>();
 builder.Services.AddSingleton<PersonnelService>();
+builder.Services.AddSingleton<FinanceService>();
 builder.Services.AddSingleton<TourDispatchService>();
+builder.Services.AddSingleton<TourRecoveryService>();
 builder.Services.AddHostedService<GameTickEngine>();
 
 var app = builder.Build();

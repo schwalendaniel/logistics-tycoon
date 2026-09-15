@@ -59,14 +59,22 @@ public class JobService : IJobService
     {
         lock (_gameState.Sync)
         {
-            foreach (var job in _gameState.Jobs.Where(j => j.Status == JobStatus.Open && j.ExpirationDate < DateTime.UtcNow))
+            var now = GameClock.Now(_gameState.Company);
+            foreach (var job in _gameState.Jobs.Where(j => j.Status == JobStatus.Open))
             {
+                if (GameClock.IsLegacyRealWorldTimestamp(job.ExpirationDate))
+                {
+                    job.ExpirationDate = now.AddHours(GameClock.JobLifetimeHours);
+                    continue;
+                }
+
+                if (job.ExpirationDate >= now) continue;
                 job.Status = JobStatus.Failed;
             }
 
             _gameState.Jobs.RemoveAll(j =>
                 j.Status is JobStatus.Failed or JobStatus.Completed &&
-                j.ExpirationDate < DateTime.UtcNow.AddHours(-2));
+                j.ExpirationDate < now.AddHours(-2));
         }
     }
 
@@ -115,7 +123,7 @@ public class JobService : IJobService
                 IsIllegal = isContraband,
                 InspectionRiskPercentage = isContraband ? Math.Round(_random.NextDouble() * 35.0 + 15.0, 1) : 0.0,
                 PenaltyFine = isContraband ? revenue * 2.5m : 0m,
-                ExpirationDate = DateTime.UtcNow.AddMinutes(45),
+                ExpirationDate = GameClock.Now(_gameState.Company).AddHours(GameClock.JobLifetimeHours),
                 Status = JobStatus.Open
             });
         }

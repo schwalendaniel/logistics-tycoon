@@ -29,7 +29,7 @@ public class TourDispatchService
 
             if (job == null) return (false, "Auftrag nicht gefunden.", null);
             if (job.Status != JobStatus.Open) return (false, "Auftrag ist nicht mehr offen.", null);
-            if (job.ExpirationDate < DateTime.UtcNow) return (false, "Auftrag abgelaufen.", null);
+            if (job.ExpirationDate < GameClock.Now(_state.Company)) return (false, "Auftrag abgelaufen.", null);
             if (truck == null) return (false, "Fahrzeug existiert nicht.", null);
             if (truck.Status != TruckStatus.Idle) return (false, $"Fahrzeug nicht frei (Status: {truck.Status}).", null);
             if (truck.MaxPayloadTons < job.CargoWeightTons)
@@ -37,7 +37,6 @@ public class TourDispatchService
                 return (false, $"Nutzlast zu gering ({truck.MaxPayloadTons}t < {job.CargoWeightTons}t).", null);
             }
 
-            if (truck.CurrentFuelLiters < 15.0) return (false, "Zu wenig Kraftstoff im Tank.", null);
             if (driver == null) return (false, "Fahrer existiert nicht.", null);
             if (driver.Status == DriverStatus.SickLeave) return (false, "Fahrer ist krankgeschrieben.", null);
             if (driver.Status != DriverStatus.Available) return (false, $"Fahrer nicht verfügbar (Status: {driver.Status}).", null);

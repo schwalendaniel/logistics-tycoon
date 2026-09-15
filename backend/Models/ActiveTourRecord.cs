@@ -16,4 +16,5 @@ public class ActiveTourRecord
     public double DeadheadKm { get; set; }
     public int BreakdownTicksRemaining { get; set; }
     public bool InspectionResolved { get; set; }
+    public bool RecoveryRequested { get; set; }
 }

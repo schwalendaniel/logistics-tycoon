@@ -8,5 +8,7 @@ public class Company
     public long TickCount { get; set; }
     public int GameDay { get; set; } = 1;
     public int GameHour { get; set; }
+    public bool GameOver { get; set; }
+    public string LoansJson { get; set; } = "[]";
     public string EventLogJson { get; set; } = "[]";
 }

@@ -6,24 +6,31 @@ public class GameTickEngine : BackgroundService
 {
     private readonly GameState _state;
     private readonly PersistenceService _persistence;
+    private readonly FinanceService _finance;
     private readonly ILogger<GameTickEngine> _logger;
     private readonly Random _random = new();
 
-    public GameTickEngine(GameState state, PersistenceService persistence, ILogger<GameTickEngine> logger)
+    public GameTickEngine(GameState state, PersistenceService persistence, FinanceService finance, ILogger<GameTickEngine> logger)
     {
         _state = state;
         _persistence = persistence;
+        _finance = finance;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-
-        while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                double tickIntervalSeconds;
+                lock (_state.Sync)
+                {
+                    tickIntervalSeconds = GameState.BaseTickIntervalSeconds / _state.SpeedMultiplier;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(Math.Max(0.05, tickIntervalSeconds)), stoppingToken);
                 TickOnce();
                 if (_state.Company.TickCount % 10 == 0)
                 {
@@ -41,6 +48,7 @@ public class GameTickEngine : BackgroundService
     {
         lock (_state.Sync)
         {
+            if (_state.Company.GameOver) return;
             _state.Company.TickCount++;
             AdvanceClock();
             AdvanceMaintenance();
@@ -50,11 +58,8 @@ public class GameTickEngine : BackgroundService
 
     private void AdvanceClock()
     {
-        _state.Company.GameHour++;
-        if (_state.Company.GameHour < 24) return;
-
-        _state.Company.GameHour = 0;
-        _state.Company.GameDay++;
+        GameClock.Advance(_state.Company);
+        var newGameDay = _state.Company.GameHour == 0;
 
         foreach (var driver in _state.Drivers)
         {
@@ -101,9 +106,10 @@ public class GameTickEngine : BackgroundService
             }
         }
 
-        if (_state.Company.GameDay % 30 == 0)
+        if (newGameDay && _state.Company.GameDay % 30 == 0)
         {
             PayMonthlySalaries();
+            _finance.ChargeMonthlyInterest();
         }
     }
 
@@ -141,16 +147,14 @@ public class GameTickEngine : BackgroundService
                 continue;
             }
 
-            if (tour.BreakdownTicksRemaining > 0)
+            if (tour.Truck.Status == TruckStatus.BrokenDown)
             {
-                tour.BreakdownTicksRemaining--;
                 continue;
             }
 
             if (tour.Truck.CurrentFuelLiters <= 0)
             {
-                _state.AddLog($"{tour.Truck.LicensePlate} liegt ohne Sprit. Tour abgebrochen.");
-                FailTour(tour);
+                RefuelOnRoad(tour);
                 continue;
             }
 
@@ -158,8 +162,7 @@ public class GameTickEngine : BackgroundService
             durationMinutes *= GameEconomy.SpeedFactor(tour.Truck.Type);
             durationMinutes *= GameEconomy.ReliabilityDurationFactor(tour.Driver.Reliability);
 
-            // 1 Tick = 1 Spielstunde → Fortschritt in Minuten
-            var minutesPerTick = 60.0;
+            var minutesPerTick = (double)GameClock.MinutesPerTick;
             var delta = minutesPerTick / durationMinutes;
             var previous = tour.Progress;
             tour.Progress = Math.Min(1.0, tour.Progress + delta);
@@ -188,6 +191,12 @@ public class GameTickEngine : BackgroundService
             var skillFactor = 1.0 - (tour.Driver.DrivingSkill / 400.0);
             var fuelBurned = stepKm * GameEconomy.FuelLitersPerKm(tour.Truck.Type) * skillFactor;
             if (tour.Truck.EngineCondition < 50) fuelBurned *= 1.15;
+
+            if (tour.Truck.CurrentFuelLiters < fuelBurned)
+            {
+                RefuelOnRoad(tour);
+            }
+
             tour.Truck.CurrentFuelLiters = Math.Max(0, tour.Truck.CurrentFuelLiters - fuelBurned);
             tour.AccumulatedFuelLiters += fuelBurned;
             tour.AccumulatedFuelCost += (decimal)fuelBurned * GameEconomy.DieselPerLiter;
@@ -216,9 +225,20 @@ public class GameTickEngine : BackgroundService
         risk *= 1.0 - tour.Driver.DrivingSkill / 140.0;
         if (risk <= 0 || _random.NextDouble() > risk) return;
 
-        tour.BreakdownTicksRemaining = _random.Next(2, 6);
+        tour.Truck.Status = TruckStatus.BrokenDown;
+        tour.BreakdownTicksRemaining = 0;
         tour.Driver.Morale = Math.Max(5, tour.Driver.Morale - 4);
-        _state.AddLog($"Panne: {tour.Truck.LicensePlate} ({tour.Driver.Name}) — Verzögerung.");
+        _state.AddLog($"Panne: {tour.Truck.LicensePlate} ({tour.Driver.Name}) — LKW steht. Bergung oder Abschleppen erforderlich.");
+    }
+
+    private void RefuelOnRoad(ActiveTour tour)
+    {
+        var liters = Math.Max(25.0, tour.Truck.FuelCapacityLiters * 0.35);
+        var cost = Math.Round((decimal)liters * GameEconomy.DieselPerLiter * 1.8m, 2);
+        _state.PostLedger(-cost, LedgerCategory.RoadsideFuel, $"Notbetankung unterwegs {tour.Truck.LicensePlate}");
+        tour.AccumulatedFuelCost += cost;
+        tour.Truck.CurrentFuelLiters = Math.Min(tour.Truck.FuelCapacityLiters, liters);
+        _state.AddLog($"{tour.Truck.LicensePlate} wurde unterwegs notbetankt: -{cost:N2} €.");
     }
 
     private void MaybeInspect(ActiveTour tour, double previousProgress)
@@ -261,7 +281,7 @@ public class GameTickEngine : BackgroundService
     private void CompleteTour(ActiveTour tour, bool seized)
     {
         if (seized) return;
-        if (tour.Truck.Status == TruckStatus.Impounded) return;
+        if (tour.Truck.Status is TruckStatus.Impounded or TruckStatus.BrokenDown) return;
 
         tour.Job.Status = JobStatus.Completed;
         tour.Truck.Status = TruckStatus.Idle;
@@ -270,16 +290,19 @@ public class GameTickEngine : BackgroundService
         var fuel = Math.Round(tour.AccumulatedFuelCost, 2);
         var toll = Math.Round(tour.AccumulatedToll, 2);
         var wear = Math.Round(tour.AccumulatedWear, 2);
-        var net = tour.Job.Revenue - fuel - toll - wear;
+        var isLate = GameClock.Now(_state.Company) > tour.Job.ExpirationDate;
+        var revenue = isLate ? Math.Round(tour.Job.Revenue * 0.8m, 2) : tour.Job.Revenue;
+        var net = revenue - fuel - toll - wear;
 
-        _state.PostLedger(tour.Job.Revenue, LedgerCategory.Revenue, tour.Job.Title);
+        _state.PostLedger(revenue, LedgerCategory.Revenue, isLate ? $"{tour.Job.Title} (verspätet, -20 %)" : tour.Job.Title);
         if (fuel > 0) _state.PostLedger(-fuel, LedgerCategory.Fuel, $"Diesel {tour.Truck.LicensePlate}");
         if (toll > 0) _state.PostLedger(-toll, LedgerCategory.Toll, $"Maut {tour.Truck.LicensePlate}");
         if (wear > 0) _state.PostLedger(-wear, LedgerCategory.Wear, $"Verschleiß {tour.Truck.LicensePlate}");
 
         FinishDriverAfterTour(tour.Driver, tour);
         var deadhead = tour.DeadheadKm > 1 ? $" | Leerfahrt {tour.DeadheadKm:0.0} km" : "";
-        _state.AddLog($"Tour beendet: {tour.Job.Title} | Netto {net:N2} €{deadhead}");
+        var lateNote = isLate ? " | verspätet (-20 % Umsatz)" : "";
+        _state.AddLog($"Tour beendet: {tour.Job.Title} | Netto {net:N2} €{lateNote}{deadhead}");
         _state.ActiveTours.TryRemove(tour.Id, out _);
     }
 

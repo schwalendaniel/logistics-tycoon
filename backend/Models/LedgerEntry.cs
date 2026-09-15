@@ -14,7 +14,15 @@ public enum LedgerCategory
     Purchase,
     Hire,
     Bonus,
-    Depot
+    Depot,
+    Sale,
+    Loan,
+    Interest,
+    Bankruptcy,
+    RoadsideFuel,
+    Recovery,
+    Towing,
+    Severance
 }
 
 public class LedgerEntry

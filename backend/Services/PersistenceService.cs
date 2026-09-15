@@ -26,6 +26,9 @@ public class PersistenceService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<GameDbContext>();
         await db.Database.EnsureCreatedAsync();
+        await EnsureCompanyColumnsAsync(db);
+        await EnsureTourColumnsAsync(db);
+        await EnsureDepotColumnsAsync(db);
 
         var company = await db.Companies.AsNoTracking().FirstOrDefaultAsync();
         if (company == null)
@@ -48,6 +51,16 @@ public class PersistenceService
             _state.Depots.AddRange(db.Depots.AsNoTracking().ToList());
             _state.Ledger.Clear();
             _state.Ledger.AddRange(db.Ledger.AsNoTracking().OrderBy(l => l.Timestamp).ToList());
+            _state.Loans.Clear();
+            try
+            {
+                var loans = JsonSerializer.Deserialize<List<Loan>>(company.LoansJson, JsonOptions);
+                if (loans != null) _state.Loans.AddRange(loans);
+            }
+            catch (JsonException)
+            {
+                // ignore corrupt loan data
+            }
             _state.ActiveTours.Clear();
 
             try
@@ -100,12 +113,52 @@ public class PersistenceService
                     AccumulatedWear = record.AccumulatedWear,
                     DeadheadKm = record.DeadheadKm,
                     BreakdownTicksRemaining = record.BreakdownTicksRemaining,
-                    InspectionResolved = record.InspectionResolved
+                    InspectionResolved = record.InspectionResolved,
+                    RecoveryRequested = record.RecoveryRequested
                 };
             }
         }
 
         _logger.LogInformation("Spielstand geladen ({Trucks} LKW, {Jobs} Jobs).", _state.Trucks.Count, _state.Jobs.Count);
+    }
+
+    private static async Task EnsureCompanyColumnsAsync(GameDbContext db)
+    {
+        var columns = await db.Database.SqlQueryRaw<string>("SELECT name AS Value FROM pragma_table_info('Companies')")
+            .ToListAsync();
+
+        if (!columns.Contains("GameOver", StringComparer.OrdinalIgnoreCase))
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN GameOver INTEGER NOT NULL DEFAULT 0");
+        }
+
+        if (!columns.Contains("LoansJson", StringComparer.OrdinalIgnoreCase))
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Companies ADD COLUMN LoansJson TEXT NOT NULL DEFAULT '[]'");
+        }
+    }
+
+    private static async Task EnsureTourColumnsAsync(GameDbContext db)
+    {
+        var columns = await db.Database.SqlQueryRaw<string>("SELECT name AS Value FROM pragma_table_info('Tours')")
+            .ToListAsync();
+
+        if (!columns.Contains("RecoveryRequested", StringComparer.OrdinalIgnoreCase))
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Tours ADD COLUMN RecoveryRequested INTEGER NOT NULL DEFAULT 0");
+        }
+    }
+
+    private static async Task EnsureDepotColumnsAsync(GameDbContext db)
+    {
+        var columns = await db.Database.SqlQueryRaw<string>("SELECT name AS Value FROM pragma_table_info('Depots')")
+            .ToListAsync();
+
+        if (!columns.Contains("Capacity", StringComparer.OrdinalIgnoreCase))
+        {
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE Depots ADD COLUMN Capacity INTEGER NOT NULL DEFAULT 4");
+            await db.Database.ExecuteSqlRawAsync("UPDATE Depots SET Capacity = 2 WHERE IsHome = 1");
+        }
     }
 
     public async Task SaveAsync()
@@ -137,11 +190,13 @@ public class PersistenceService
         lock (_state.Sync)
         {
             company = CloneCompany(_state.Company);
+            _state.SaveLoans();
+            company.LoansJson = _state.Company.LoansJson;
             company.EventLogJson = JsonSerializer.Serialize(_state.EventLog.ToArray(), JsonOptions);
             trucks = _state.Trucks.Select(CloneTruck).ToList();
             drivers = _state.Drivers.Select(CloneDriver).ToList();
             jobs = _state.Jobs.Select(CloneJob).ToList();
-            depots = _state.Depots.Select(d => new Depot { Id = d.Id, CityName = d.CityName, IsHome = d.IsHome }).ToList();
+            depots = _state.Depots.Select(d => new Depot { Id = d.Id, CityName = d.CityName, IsHome = d.IsHome, Capacity = d.Capacity }).ToList();
             ledger = _state.Ledger.Select(l => new LedgerEntry
             {
                 Id = l.Id,
@@ -165,7 +220,8 @@ public class PersistenceService
                 AccumulatedWear = t.AccumulatedWear,
                 DeadheadKm = t.DeadheadKm,
                 BreakdownTicksRemaining = t.BreakdownTicksRemaining,
-                InspectionResolved = t.InspectionResolved
+                InspectionResolved = t.InspectionResolved,
+                RecoveryRequested = t.RecoveryRequested
             }).ToList();
         }
 
@@ -198,6 +254,8 @@ public class PersistenceService
         TickCount = c.TickCount,
         GameDay = c.GameDay,
         GameHour = c.GameHour,
+        GameOver = c.GameOver,
+        LoansJson = c.LoansJson,
         EventLogJson = c.EventLogJson
     };
 

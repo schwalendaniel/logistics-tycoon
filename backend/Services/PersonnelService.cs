@@ -125,6 +125,35 @@ public class PersonnelService
         return (true, "");
     }
 
+    public (bool Ok, string Error) Dismiss(Guid driverId)
+    {
+        lock (_state.Sync)
+        {
+            var driver = _state.Drivers.FirstOrDefault(d => d.Id == driverId);
+            if (driver == null) return (false, "Fahrer unbekannt.");
+            if (driver.Status == DriverStatus.OnRoute)
+            {
+                return (false, "Fahrer kann während einer Tour nicht entlassen werden.");
+            }
+
+            var severance = Math.Round(driver.CurrentSalary * 0.5m, 2);
+            if (!_state.TryDebit(severance, LedgerCategory.Severance, $"Abfindung {driver.Name}"))
+            {
+                return (false, $"Nicht genug Guthaben für die Abfindung ({severance:N2} €).");
+            }
+
+            _state.Drivers.Remove(driver);
+            _state.Trucks
+                .Where(t => t.AssignedDriverId == driver.Id)
+                .ToList()
+                .ForEach(t => t.AssignedDriverId = null);
+            _state.AddLog($"Entlassen: {driver.Name} (Abfindung {severance:N2} €).");
+        }
+
+        _ = _persistence.SaveAsync();
+        return (true, "");
+    }
+
     public (bool Ok, string Error) ReleaseArrested(Guid driverId)
     {
         lock (_state.Sync)

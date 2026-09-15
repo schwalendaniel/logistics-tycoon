@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using LogisticsGame.Api.Models;
 
 namespace LogisticsGame.Api.Services;
@@ -19,6 +20,7 @@ public class ActiveTour
     public double DeadheadKm { get; set; }
     public int BreakdownTicksRemaining { get; set; }
     public bool InspectionResolved { get; set; }
+    public bool RecoveryRequested { get; set; }
 
     public double ProgressPercentage => Progress * 100.0;
     public bool IsFinished => Progress >= 1.0;
@@ -49,6 +51,12 @@ public class TruckCatalogItem
 public class GameState
 {
     public readonly object Sync = new();
+    public const double DefaultSpeedMultiplier = 1.0;
+    public const double MinSpeedMultiplier = 0.5;
+    public const double MaxSpeedMultiplier = 10.0;
+    public const double BaseTickIntervalSeconds = 3.0;
+
+    public double SpeedMultiplier { get; set; } = DefaultSpeedMultiplier;
 
     public Company Company { get; set; } = new();
 
@@ -66,6 +74,7 @@ public class GameState
     public ConcurrentDictionary<Guid, ActiveTour> ActiveTours { get; } = new();
     public ConcurrentQueue<string> EventLog { get; } = new();
     public List<DriverProspect> HirePool { get; } = new();
+    public List<Loan> Loans { get; } = new();
 
     public static readonly TruckCatalogItem[] TruckCatalog =
     [
@@ -116,6 +125,7 @@ public class GameState
         Jobs.Clear();
         Depots.Clear();
         Ledger.Clear();
+        Loans.Clear();
         ActiveTours.Clear();
         while (EventLog.TryDequeue(out _)) { }
 
@@ -154,9 +164,35 @@ public class GameState
         };
         Trucks.Add(van);
 
-        Depots.Add(new Depot { CityName = "Frankfurt", IsHome = true });
+        Depots.Add(new Depot { CityName = "Frankfurt", IsHome = true, Capacity = 2 });
         AddLog("Neues Unternehmen in Frankfurt. Ein Van und Jonas Klein stehen bereit.");
         PostLedger(0m, LedgerCategory.Revenue, "Spielstart");
+    }
+
+    public int CreditScore
+    {
+        get
+        {
+            var debt = Loans.Sum(l => l.RemainingPrincipal);
+            var score = 600 + (int)Math.Clamp(Company.Balance / 500m, -250, 250) - (int)Math.Clamp(debt / 500m, 0, 250);
+            return Math.Clamp(score, 100, 850);
+        }
+    }
+
+    public void SaveLoans()
+    {
+        Company.LoansJson = JsonSerializer.Serialize(Loans);
+    }
+
+    public void ResetAfterBankruptcy()
+    {
+        SeedNewGame();
+        AddLog("Insolvenz abgeschlossen. Ein neuer Spielstand wurde gestartet.");
+    }
+
+    public ActiveTour? FindActiveTour(Guid tourId)
+    {
+        return ActiveTours.TryGetValue(tourId, out var tour) ? tour : null;
     }
 
     public void AddLog(string message)

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Logistics Tycoon</title>
+  <script>window.location.replace('/vue/');</script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -31,6 +32,15 @@
         <div id="status-box" class="status-box"></div>
       </div>
 
+      <div class="speed-sidebar-control">
+        <div class="speed-sidebar-label">
+          <span>Spieltempo</span>
+          <output id="game-speed-value" for="game-speed-slider">1,0x</output>
+        </div>
+        <input id="game-speed-slider" type="range" min="0.5" max="10" step="0.5" value="1" aria-label="Spieltempo">
+        <div class="speed-sidebar-hints"><span>0,5x</span><span>10x</span></div>
+      </div>
+
       <div class="section-label">Verfügbare Fracht</div>
       <div id="job-list" class="job-list"></div>
       <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Aufträge neu würfeln</button>
@@ -55,6 +65,7 @@
           <button id="mgmt-tab-driver-btn" class="mgmt-tab-btn">Personal</button>
           <button id="mgmt-tab-market-trucks-btn" class="mgmt-tab-btn">LKW-Händler</button>
           <button id="mgmt-tab-market-drivers-btn" class="mgmt-tab-btn">Job-Agentur</button>
+          <button id="mgmt-tab-management-btn" class="mgmt-tab-btn">Management</button>
         </div>
         <button id="close-mgmt-btn" class="close-btn-lg">✕</button>
       </div>
@@ -64,6 +75,7 @@
         <div id="mgmt-driver-view" class="mgmt-view-grid" style="display: none;"></div>
         <div id="mgmt-market-trucks-view" class="mgmt-view-grid" style="display: none;"></div>
         <div id="mgmt-market-drivers-view" class="mgmt-view-grid" style="display: none;"></div>
+        <div id="mgmt-management-view" class="finance-view" style="display: none;"></div>
       </div>
     </div>
   </div>

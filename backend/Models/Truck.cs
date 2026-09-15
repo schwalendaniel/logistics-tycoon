@@ -40,7 +40,8 @@ public enum TruckStatus
     Loading,
     EnRoute,
     Maintenance,
-    Impounded // Beschlagnahmt nach Schwarzmarkt-Razzia
+    Impounded, // Beschlagnahmt nach Schwarzmarkt-Razzia
+    BrokenDown
 }
 
 public enum MaintenanceLevel

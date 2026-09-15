@@ -90,4 +90,12 @@ public static class GameEconomy
         var avg = (driver.DrivingSkill + driver.Reliability + driver.StressResistance + driver.Loyalty) / 4.0;
         return Math.Round(2200m + (decimal)avg * 18m, 0);
     }
+
+    public static decimal ResaleValue(Truck truck)
+    {
+        var averageCondition = Math.Clamp((truck.EngineCondition + truck.TireCondition) / 2.0, 0, 100);
+        var conditionFactor = 0.35 + averageCondition / 100.0 * 0.65;
+        var kilometerFactor = Math.Max(0.25, 1.0 - truck.TotalKilometers / 250_000.0 * 0.5);
+        return Math.Round(truck.PurchasePrice * (decimal)(conditionFactor * kilometerFactor), 2);
+    }
 }

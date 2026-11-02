@@ -1,110 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <title>Logistics Tycoon</title>
-  <script>window.location.replace('/vue/');</script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
-
-  <div id="map"></div>
-
-  <button id="open-sidebar-btn" class="toggle-btn" style="display: none;">☰ Dispo-Menü</button>
-
-  <aside id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-      <h3 class="panel-title">Disponenten-Zentrale</h3>
-      <button id="close-sidebar-btn" class="close-btn" title="Einklappen">✕</button>
-    </div>
-
-    <!-- Schnellzugriff auf Dashboards -->
-    <div class="hub-nav-bar">
-      <button id="open-fleet-hub-btn" class="hub-btn">🚚 Fuhrpark & Wartung</button>
-      <button id="open-drivers-hub-btn" class="hub-btn">👤 Personalverwaltung</button>
-      <button id="open-market-hub-btn" class="hub-btn hub-btn-market">🏪 Marktplatz (Kauf & Hiring)</button>
-    </div>
-
-    <div class="sidebar-body">
-      <div>
-        <div id="balance-box" class="balance-box"></div>
-        <div id="status-box" class="status-box"></div>
-      </div>
-
-      <div class="speed-sidebar-control">
-        <div class="speed-sidebar-label">
-          <span>Spieltempo</span>
-          <output id="game-speed-value" for="game-speed-slider">1,0x</output>
-        </div>
-        <input id="game-speed-slider" type="range" min="0.5" max="10" step="0.5" value="1" aria-label="Spieltempo">
-        <div class="speed-sidebar-hints"><span>0,5x</span><span>10x</span></div>
-      </div>
-
-      <div class="section-label">Verfügbare Fracht</div>
-      <div id="job-list" class="job-list"></div>
-      <button id="refresh-jobs-btn" class="btn-secondary" style="width: 100%; margin-top: 8px;">Aufträge neu würfeln</button>
-
-      <div class="ticker-section">
-        <div class="section-label">Ereignisse</div>
-        <div id="log-list" class="log-list"></div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Großes Management Dashboard -->
-  <div id="management-modal" class="fullscreen-modal-backdrop" style="display: none;">
-    <div class="management-window">
-      <div class="mgmt-header">
-        <div class="mgmt-title-group">
-          <h2 id="mgmt-title">Flotten-Management</h2>
-          <span id="mgmt-subtitle">Fahrzeugstatus, Tankfüllstände und Zustand überwachen</span>
-        </div>
-        <div class="mgmt-tab-buttons">
-          <button id="mgmt-tab-fleet-btn" class="mgmt-tab-btn active">Fuhrpark</button>
-          <button id="mgmt-tab-driver-btn" class="mgmt-tab-btn">Personal</button>
-          <button id="mgmt-tab-market-trucks-btn" class="mgmt-tab-btn">LKW-Händler</button>
-          <button id="mgmt-tab-market-drivers-btn" class="mgmt-tab-btn">Job-Agentur</button>
-          <button id="mgmt-tab-management-btn" class="mgmt-tab-btn">Management</button>
-        </div>
-        <button id="close-mgmt-btn" class="close-btn-lg">✕</button>
-      </div>
-
-      <div class="mgmt-content">
-        <div id="mgmt-fleet-view" class="mgmt-view-grid"></div>
-        <div id="mgmt-driver-view" class="mgmt-view-grid" style="display: none;"></div>
-        <div id="mgmt-market-trucks-view" class="mgmt-view-grid" style="display: none;"></div>
-        <div id="mgmt-market-drivers-view" class="mgmt-view-grid" style="display: none;"></div>
-        <div id="mgmt-management-view" class="finance-view" style="display: none;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Dispatch Modal -->
-  <div id="dispatch-modal" class="modal-backdrop" style="display: none;">
-    <div class="modal-box">
-      <div class="modal-header">
-        <h4 id="modal-job-title" style="margin: 0; color: #00e5ff;">Tour disponieren</h4>
-        <button id="close-modal-btn" class="close-btn">✕</button>
-      </div>
-      <div id="modal-job-details" style="font-size: 12px; margin: 10px 0; color: #cbd5e1; line-height: 1.4;"></div>
-
-      <label class="section-label">Fahrzeug wählen:</label>
-      <select id="select-truck" class="custom-select"></select>
-
-      <label class="section-label" style="margin-top: 10px;">Fahrer zuweisen:</label>
-      <select id="select-driver" class="custom-select"></select>
-
-      <div id="modal-warning" style="font-size: 11px; color: #ff5252; margin-top: 8px; min-height: 14px;"></div>
-
-      <div style="display: flex; gap: 8px; margin-top: 14px;">
-        <button id="cancel-dispatch-btn" class="btn-secondary" style="flex: 1;">Abbrechen</button>
-        <button id="confirm-dispatch-btn" class="btn-primary" style="flex: 1; margin: 0;">Starten</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" src="js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logistics Tycoon</title>
+    <script type="module" crossorigin src="./assets/index-D71lwiRb.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B_rc0n_T.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
 </html>

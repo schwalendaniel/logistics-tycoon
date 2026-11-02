@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "tool": "svg-map-generator",
+  "savedAt": "2026-09-15T21:58:24.760Z",
+  "prefs": {
+    "fillColor": "#151513",
+    "strokeColor": "#2d2d2d",
+    "strokeWidth": "0.5",
+    "divBgColor": "#2d2d2d",
+    "bgColor": "#3d3d3d",
+    "graticuleColor": "#555555",
+    "showBackground": false,
+    "showGraticule": false,
+    "graticuleStep": "10",
+    "projection": "geoNaturalEarth1",
+    "mapSource": "region/world/europeLow",
+    "showLabels": false,
+    "labelFit": true,
+    "labelSize": "11",
+    "labelColor": "#e0e0e0",
+    "labelFontFamily": "Space Grotesk, sans-serif"
+  },
+  "state": {
+    "mapSource": "region/world/europeLow",
+    "chart": {
+      "zoomLevel": 0.9549048826836013,
+      "rotationX": 0,
+      "rotationY": 0,
+      "translateX": 469.23517264221437,
+      "translateY": 1384.295456586988
+    },
+    "hiddenIds": [],
+    "painted": [],
+    "labels": [],
+    "simplify": 0,
+    "sort": "az-asc"
+  }
+}
